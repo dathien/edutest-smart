@@ -231,6 +231,222 @@ export const ExamRoomView: React.FC<ExamRoomViewProps> = ({
     setAutosaveTime(new Date().toLocaleTimeString());
   };
 
+  // Answer handler for Single True / False
+  const handleAnswerSingleTF = (qId: string, val: boolean) => {
+    const q = activeExam?.questions.find(item => item.id === qId);
+    if (!q) return;
+
+    const isCorrect = q.singleTrueFalseAnswer === val;
+    const awarded = isCorrect ? q.points : 0;
+
+    setAnswers(prev => ({
+      ...prev,
+      [qId]: {
+        questionId: qId,
+        type: 'true_false_single',
+        selectedOption: val ? 'true' : 'false',
+        isCorrect,
+        awardedPoints: awarded,
+      },
+    }));
+    setAutosaveTime(new Date().toLocaleTimeString());
+    playSound('click');
+  };
+
+  // Answer handler for Numeric Answer (with epsilon tolerance & fractions)
+  const handleAnswerNumeric = (qId: string, valStr: string) => {
+    const q = activeExam?.questions.find(item => item.id === qId);
+    if (!q) return;
+
+    let userNum: number | null = null;
+    const trimmed = valStr.trim().replace(',', '.');
+
+    // Parse fraction a/b
+    if (trimmed.includes('/')) {
+      const parts = trimmed.split('/');
+      if (parts.length === 2 && !isNaN(Number(parts[0])) && !isNaN(Number(parts[1])) && Number(parts[1]) !== 0) {
+        userNum = Number(parts[0]) / Number(parts[1]);
+      }
+    } else if (!isNaN(Number(trimmed)) && trimmed !== '') {
+      userNum = Number(trimmed);
+    }
+
+    let isCorrect = false;
+    if (userNum !== null && q.numericAnswerConfig) {
+      const target = q.numericAnswerConfig.targetValue;
+      const tol = q.numericAnswerConfig.tolerance ?? 0.01;
+      isCorrect = Math.abs(userNum - target) <= tol;
+    }
+
+    setAnswers(prev => ({
+      ...prev,
+      [qId]: {
+        questionId: qId,
+        type: 'numeric_answer',
+        numericAnswer: valStr,
+        isCorrect,
+        awardedPoints: isCorrect ? q.points : 0,
+      },
+    }));
+    setAutosaveTime(new Date().toLocaleTimeString());
+  };
+
+  // Answer handler for Fill in Blank
+  const handleAnswerBlank = (qId: string, blankId: string, val: string) => {
+    const q = activeExam?.questions.find(item => item.id === qId);
+    if (!q || !q.fillInBlankConfig) return;
+
+    const currentBlanks = answers[qId]?.blankAnswers || {};
+    const updatedBlanks = { ...currentBlanks, [blankId]: val };
+
+    let correctCount = 0;
+    q.fillInBlankConfig.blanks.forEach(b => {
+      const userText = (updatedBlanks[b.id] || '').trim().toLowerCase();
+      const match = b.correctAnswers.some(ans => ans.trim().toLowerCase() === userText);
+      if (match) correctCount++;
+    });
+
+    const isAllCorrect = correctCount === q.fillInBlankConfig.blanks.length;
+    const awarded = Number(((correctCount / q.fillInBlankConfig.blanks.length) * q.points).toFixed(2));
+
+    setAnswers(prev => ({
+      ...prev,
+      [qId]: {
+        questionId: qId,
+        type: 'fill_in_blank',
+        blankAnswers: updatedBlanks,
+        isCorrect: isAllCorrect,
+        awardedPoints: awarded,
+      },
+    }));
+    setAutosaveTime(new Date().toLocaleTimeString());
+  };
+
+  // Answer handler for Dropdown Choice
+  const handleAnswerDropdown = (qId: string, dropdownId: string, val: string) => {
+    const q = activeExam?.questions.find(item => item.id === qId);
+    if (!q || !q.dropdownChoiceConfig) return;
+
+    const currentDropdowns = answers[qId]?.dropdownAnswers || {};
+    const updatedDropdowns = { ...currentDropdowns, [dropdownId]: val };
+
+    let correctCount = 0;
+    q.dropdownChoiceConfig.dropdowns.forEach(d => {
+      if (updatedDropdowns[d.id] === d.correctOption) {
+        correctCount++;
+      }
+    });
+
+    const isAllCorrect = correctCount === q.dropdownChoiceConfig.dropdowns.length;
+    const awarded = Number(((correctCount / q.dropdownChoiceConfig.dropdowns.length) * q.points).toFixed(2));
+
+    setAnswers(prev => ({
+      ...prev,
+      [qId]: {
+        questionId: qId,
+        type: 'dropdown_choice',
+        dropdownAnswers: updatedDropdowns,
+        isCorrect: isAllCorrect,
+        awardedPoints: awarded,
+      },
+    }));
+    setAutosaveTime(new Date().toLocaleTimeString());
+    playSound('click');
+  };
+
+  // Answer handler for Matching
+  const handleAnswerMatching = (qId: string, leftId: string, rightId: string) => {
+    const q = activeExam?.questions.find(item => item.id === qId);
+    if (!q || !q.matchingConfig) return;
+
+    const currentPairs = answers[qId]?.matchingPairs || {};
+    const updatedPairs = { ...currentPairs, [leftId]: rightId };
+
+    let correctCount = 0;
+    q.matchingConfig.pairs.forEach(p => {
+      if (updatedPairs[p.leftId] === p.rightId) {
+        correctCount++;
+      }
+    });
+
+    const isAllCorrect = correctCount === q.matchingConfig.pairs.length;
+    const awarded = Number(((correctCount / q.matchingConfig.pairs.length) * q.points).toFixed(2));
+
+    setAnswers(prev => ({
+      ...prev,
+      [qId]: {
+        questionId: qId,
+        type: 'matching',
+        matchingPairs: updatedPairs,
+        isCorrect: isAllCorrect,
+        awardedPoints: awarded,
+      },
+    }));
+    setAutosaveTime(new Date().toLocaleTimeString());
+    playSound('click');
+  };
+
+  // Answer handler for Ordering
+  const handleAnswerOrdering = (qId: string, newOrder: string[]) => {
+    const q = activeExam?.questions.find(item => item.id === qId);
+    if (!q || !q.orderingConfig) return;
+
+    const correctOrder = q.orderingConfig.correctOrder;
+    const isCorrect = JSON.stringify(newOrder) === JSON.stringify(correctOrder);
+
+    setAnswers(prev => ({
+      ...prev,
+      [qId]: {
+        questionId: qId,
+        type: 'ordering',
+        orderAnswer: newOrder,
+        isCorrect,
+        awardedPoints: isCorrect ? q.points : 0,
+      },
+    }));
+    setAutosaveTime(new Date().toLocaleTimeString());
+    playSound('click');
+  };
+
+  // Answer handler for Multiple Select
+  const handleAnswerMultipleSelect = (qId: string, letter: string) => {
+    const q = activeExam?.questions.find(item => item.id === qId);
+    if (!q || !q.multipleSelectConfig) return;
+
+    const currentSelected = answers[qId]?.multipleSelectAnswers || [];
+    let updated: string[];
+    if (currentSelected.includes(letter)) {
+      updated = currentSelected.filter(l => l !== letter);
+    } else {
+      updated = [...currentSelected, letter];
+    }
+
+    const correctList = q.multipleSelectConfig.correctAnswers;
+    const isExact = updated.length === correctList.length && updated.every(l => correctList.includes(l));
+
+    // Partial scoring
+    let matchCount = 0;
+    updated.forEach(l => {
+      if (correctList.includes(l)) matchCount++;
+      else matchCount = Math.max(0, matchCount - 0.5);
+    });
+    const ratio = Math.max(0, Math.min(1, matchCount / correctList.length));
+    const awarded = Number((ratio * q.points).toFixed(2));
+
+    setAnswers(prev => ({
+      ...prev,
+      [qId]: {
+        questionId: qId,
+        type: 'multiple_select',
+        multipleSelectAnswers: updated,
+        isCorrect: isExact,
+        awardedPoints: awarded,
+      },
+    }));
+    setAutosaveTime(new Date().toLocaleTimeString());
+    playSound('click');
+  };
+
   // Toggle Flag Question
   const toggleFlagQuestion = (idx: number) => {
     const next = new Set(flaggedQuestions);
@@ -494,6 +710,39 @@ export const ExamRoomView: React.FC<ExamRoomViewProps> = ({
                     </div>
                   )}
 
+                  {/* Type 2B: Single True / False */}
+                  {currentQ.type === 'true_false_single' && (
+                    <div className="space-y-3 bg-slate-50 p-5 rounded-2xl border border-slate-200">
+                      <div className="text-xs font-bold text-slate-700 uppercase tracking-wide">
+                        Khẳng định trên là Đúng hay Sai?
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <button
+                          type="button"
+                          onClick={() => handleAnswerSingleTF(currentQ.id, true)}
+                          className={`flex-1 py-3.5 rounded-xl font-bold text-sm transition-all cursor-pointer border ${
+                            answers[currentQ.id]?.selectedOption === 'true'
+                              ? 'bg-emerald-600 text-white border-emerald-700 shadow-md ring-2 ring-emerald-200'
+                              : 'bg-white border-slate-300 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700'
+                          }`}
+                        >
+                          ĐÚNG
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleAnswerSingleTF(currentQ.id, false)}
+                          className={`flex-1 py-3.5 rounded-xl font-bold text-sm transition-all cursor-pointer border ${
+                            answers[currentQ.id]?.selectedOption === 'false'
+                              ? 'bg-rose-600 text-white border-rose-700 shadow-md ring-2 ring-rose-200'
+                              : 'bg-white border-slate-300 text-slate-700 hover:bg-rose-50 hover:text-rose-700'
+                          }`}
+                        >
+                          SAI
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Type 3: Short Answer */}
                   {currentQ.type === 'short_answer' && (
                     <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
@@ -513,7 +762,33 @@ export const ExamRoomView: React.FC<ExamRoomViewProps> = ({
                     </div>
                   )}
 
-                  {/* Type 4: Essay */}
+                  {/* Type 5: Numeric Answer (with units & tolerance) */}
+                  {currentQ.type === 'numeric_answer' && (
+                    <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                      <label className="block text-xs font-bold text-slate-700">
+                        Nhập kết quả số tính toán:
+                      </label>
+                      <div className="flex items-center gap-2 max-w-sm">
+                        <input
+                          type="text"
+                          value={String(answers[currentQ.id]?.numericAnswer ?? '')}
+                          onChange={(e) => handleAnswerNumeric(currentQ.id, e.target.value)}
+                          placeholder="Ví dụ: 3.14 hoặc 7/4..."
+                          className="w-full text-sm px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl font-mono font-bold text-indigo-700 focus:ring-2 focus:ring-indigo-500"
+                        />
+                        {currentQ.numericAnswerConfig?.unit && (
+                          <span className="px-3 py-2 bg-slate-200 text-slate-700 font-bold text-xs rounded-xl shrink-0">
+                            {currentQ.numericAnswerConfig.unit}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-slate-400">
+                        * Chấp nhận số nguyên, số thập phân hoặc phân số (a/b). Sai số cho phép: ±{currentQ.numericAnswerConfig?.tolerance ?? 0.01}.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Type 6: Essay */}
                   {currentQ.type === 'essay' && (
                     <div className="space-y-2">
                       <label className="block text-xs font-bold text-slate-700">
@@ -526,6 +801,217 @@ export const ExamRoomView: React.FC<ExamRoomViewProps> = ({
                         placeholder="Trình bày các bước lập luận, biến đổi toán học hoặc định lí áp dụng..."
                         className="w-full text-xs p-3.5 border border-slate-300 rounded-xl font-mono focus:ring-2 focus:ring-indigo-500"
                       />
+                    </div>
+                  )}
+
+                  {/* Type 7: Fill in Blank */}
+                  {currentQ.type === 'fill_in_blank' && currentQ.fillInBlankConfig && (
+                    <div className="space-y-4 bg-slate-50 p-5 rounded-2xl border border-slate-200">
+                      <div className="text-xs font-bold text-slate-700 uppercase tracking-wide">
+                        Điền từ hoặc số thích hợp vào các ô trống dưới đây:
+                      </div>
+                      <div className="space-y-3">
+                        {currentQ.fillInBlankConfig.blanks.map((b) => (
+                          <div key={b.id} className="flex flex-col sm:flex-row sm:items-center gap-2">
+                            <span className="font-bold text-xs text-indigo-700 w-24 shrink-0">
+                              {b.label || `Ô trống [${b.id}]`}:
+                            </span>
+                            <input
+                              type="text"
+                              value={answers[currentQ.id]?.blankAnswers?.[b.id] || ''}
+                              onChange={(e) => handleAnswerBlank(currentQ.id, b.id, e.target.value)}
+                              placeholder="Nhập câu trả lời cho ô này..."
+                              className="flex-1 max-w-md px-3 py-2 text-xs rounded-xl border border-slate-300 bg-white font-medium focus:ring-2 focus:ring-indigo-500"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Type 8: Dropdown Choice */}
+                  {currentQ.type === 'dropdown_choice' && currentQ.dropdownChoiceConfig && (
+                    <div className="space-y-4 bg-slate-50 p-5 rounded-2xl border border-slate-200">
+                      <div className="text-xs font-bold text-slate-700 uppercase tracking-wide">
+                        Chọn phương án đúng từ danh sách thả xuống:
+                      </div>
+                      <div className="space-y-3">
+                        {currentQ.dropdownChoiceConfig.dropdowns.map((d) => (
+                          <div key={d.id} className="flex flex-col sm:flex-row sm:items-center gap-2">
+                            <span className="font-bold text-xs text-indigo-700 w-32 shrink-0">
+                              {d.label || `Lựa chọn [${d.id}]`}:
+                            </span>
+                            <select
+                              value={answers[currentQ.id]?.dropdownAnswers?.[d.id] || ''}
+                              onChange={(e) => handleAnswerDropdown(currentQ.id, d.id, e.target.value)}
+                              className="max-w-md px-3 py-2 text-xs rounded-xl border border-slate-300 bg-white font-medium focus:ring-2 focus:ring-indigo-500"
+                            >
+                              <option value="">-- Chọn phương án --</option>
+                              {d.options.map((opt, oIdx) => (
+                                <option key={oIdx} value={opt}>
+                                  {opt}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Type 9: Matching */}
+                  {currentQ.type === 'matching' && currentQ.matchingConfig && (
+                    <div className="space-y-4 bg-slate-50 p-5 rounded-2xl border border-slate-200">
+                      <div className="text-xs font-bold text-slate-700 uppercase tracking-wide">
+                        Ghép nối từng mục ở Cột A với mục tương ứng ở Cột B:
+                      </div>
+                      <div className="space-y-3">
+                        {currentQ.matchingConfig.leftItems.map((left) => {
+                          const currentRightId = answers[currentQ.id]?.matchingPairs?.[left.id] || '';
+                          return (
+                            <div
+                              key={left.id}
+                              className="p-3.5 bg-white rounded-xl border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs"
+                            >
+                              <div className="flex items-center gap-2 flex-1">
+                                <span className="font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded shrink-0">
+                                  {left.id}
+                                </span>
+                                <div className="text-slate-800 font-medium">
+                                  <MathRenderer content={left.text} inline />
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className="text-slate-400 font-bold">➔</span>
+                                <select
+                                  value={currentRightId}
+                                  onChange={(e) => handleAnswerMatching(currentQ.id, left.id, e.target.value)}
+                                  className="px-3 py-1.5 rounded-lg border border-slate-300 bg-slate-50 text-xs font-medium text-slate-800"
+                                >
+                                  <option value="">-- Chọn mục tương ứng Cột B --</option>
+                                  {currentQ.matchingConfig?.rightItems.map((right) => (
+                                    <option key={right.id} value={right.id}>
+                                      {right.id}: {right.text.replace(/[$]/g, '')}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Type 10: Ordering */}
+                  {currentQ.type === 'ordering' && currentQ.orderingConfig && (
+                    <div className="space-y-4 bg-slate-50 p-5 rounded-2xl border border-slate-200">
+                      <div className="text-xs font-bold text-slate-700 uppercase tracking-wide">
+                        Sắp xếp các bước giải theo thứ tự logic đúng (Dùng nút ▲ / ▼):
+                      </div>
+                      {(() => {
+                        const currentOrder = answers[currentQ.id]?.orderAnswer || currentQ.orderingConfig.items.map(it => it.id);
+                        return (
+                          <div className="space-y-2">
+                            {currentOrder.map((itemId, idx) => {
+                              const item = currentQ.orderingConfig?.items.find(it => it.id === itemId);
+                              if (!item) return null;
+                              return (
+                                <div
+                                  key={itemId}
+                                  className="p-3 bg-white rounded-xl border border-slate-200 flex items-center justify-between gap-3 text-xs"
+                                >
+                                  <div className="flex items-center gap-2.5">
+                                    <span className="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center shrink-0">
+                                      {idx + 1}
+                                    </span>
+                                    <div className="text-slate-800 font-medium">
+                                      <MathRenderer content={item.text} inline />
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    <button
+                                      type="button"
+                                      disabled={idx === 0}
+                                      onClick={() => {
+                                        if (idx > 0) {
+                                          const next = [...currentOrder];
+                                          const temp = next[idx - 1];
+                                          next[idx - 1] = next[idx];
+                                          next[idx] = temp;
+                                          handleAnswerOrdering(currentQ.id, next);
+                                        }
+                                      }}
+                                      className={`p-1.5 rounded-lg border text-xs font-bold ${
+                                        idx === 0 ? 'text-slate-300 border-slate-200' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                                      }`}
+                                      title="Lên trên"
+                                    >
+                                      ▲
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={idx === currentOrder.length - 1}
+                                      onClick={() => {
+                                        if (idx < currentOrder.length - 1) {
+                                          const next = [...currentOrder];
+                                          const temp = next[idx + 1];
+                                          next[idx + 1] = next[idx];
+                                          next[idx] = temp;
+                                          handleAnswerOrdering(currentQ.id, next);
+                                        }
+                                      }}
+                                      className={`p-1.5 rounded-lg border text-xs font-bold ${
+                                        idx === currentOrder.length - 1 ? 'text-slate-300 border-slate-200' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                                      }`}
+                                      title="Xuống dưới"
+                                    >
+                                      ▼
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
+
+                  {/* Type 11: Multiple Select */}
+                  {currentQ.type === 'multiple_select' && currentQ.multipleSelectConfig && (
+                    <div className="space-y-3">
+                      <div className="text-xs font-bold text-slate-700 uppercase tracking-wide">
+                        Chọn tất cả các đáp án đúng (Checkbox chọn nhiều đáp án):
+                      </div>
+                      <div className="space-y-2.5">
+                        {currentQ.multipleSelectConfig.options.map((opt, oIdx) => {
+                          const letter = ['A', 'B', 'C', 'D', 'E', 'F'][oIdx] || `P${oIdx + 1}`;
+                          const isChecked = (answers[currentQ.id]?.multipleSelectAnswers || []).includes(letter);
+                          return (
+                            <div
+                              key={oIdx}
+                              onClick={() => handleAnswerMultipleSelect(currentQ.id, letter)}
+                              className={`p-3.5 rounded-xl border text-[17px] leading-normal cursor-pointer flex items-start gap-3 transition-all ${
+                                isChecked
+                                  ? 'bg-indigo-50 border-indigo-600 ring-2 ring-indigo-200 font-semibold text-indigo-950'
+                                  : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-800'
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={() => {}} // handled by parent onClick
+                                className="w-5 h-5 rounded text-indigo-600 mt-0.5 cursor-pointer"
+                              />
+                              <span className="font-bold text-xs w-5 shrink-0 mt-0.5">{letter}.</span>
+                              <div className="flex-1 font-medium text-slate-900">
+                                <MathRenderer content={opt} />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
                 </div>

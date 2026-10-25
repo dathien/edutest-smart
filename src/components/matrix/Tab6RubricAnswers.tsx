@@ -43,6 +43,21 @@ export const Tab6RubricAnswers: React.FC<Tab6RubricAnswersProps> = ({
   const p2Questions = useMemo(() => questions.filter(q => q.type === 'true_false'), [questions]);
   const p3Questions = useMemo(() => questions.filter(q => q.type === 'short_answer'), [questions]);
   const p4Questions = useMemo(() => questions.filter(q => q.type === 'essay'), [questions]);
+  const pOtherQuestions = useMemo(
+    () =>
+      questions.filter(q =>
+        [
+          'true_false_single',
+          'numeric_answer',
+          'fill_in_blank',
+          'dropdown_choice',
+          'matching',
+          'ordering',
+          'multiple_select',
+        ].includes(q.type)
+      ),
+    [questions]
+  );
 
   // Export Word Document
   const handleExportWord = () => {
@@ -394,6 +409,85 @@ export const Tab6RubricAnswers: React.FC<Tab6RubricAnswersProps> = ({
           ))}
         </div>
       </div>
+
+      {/* Part V: Other Question Types (Numeric, Blanks, Dropdowns, Matching, Ordering, Multi-select) */}
+      {pOtherQuestions.length > 0 && (
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+          <h3 className="font-bold text-slate-800 text-base border-b border-slate-100 pb-3">
+            PHẦN V: Đáp án các dạng câu hỏi luyện tập & nâng cao ({pOtherQuestions.length} câu)
+          </h3>
+
+          <div className="space-y-4">
+            {pOtherQuestions.map((q, idx) => (
+              <div key={q.id} className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-2.5 text-xs">
+                <div className="font-bold text-sm text-slate-800">
+                  Câu {idx + 1} ({q.points} điểm - Dạng: <span className="font-mono text-indigo-700">{q.type}</span>): <MathRenderer content={q.prompt} />
+                </div>
+
+                {q.type === 'true_false_single' && (
+                  <div className="p-2.5 bg-white rounded-lg border border-slate-200 font-bold text-emerald-700">
+                    Đáp án: {q.singleTrueFalseAnswer ? 'ĐÚNG' : 'SAI'}
+                  </div>
+                )}
+
+                {q.type === 'numeric_answer' && (
+                  <div className="p-2.5 bg-white rounded-lg border border-slate-200 font-mono text-indigo-700 font-bold">
+                    Giá trị: {q.numericAnswerConfig?.targetValue} {q.numericAnswerConfig?.unit} (Sai số: ±{q.numericAnswerConfig?.tolerance ?? 0.01})
+                  </div>
+                )}
+
+                {q.type === 'fill_in_blank' && q.fillInBlankConfig && (
+                  <div className="p-2.5 bg-white rounded-lg border border-slate-200 space-y-1">
+                    {q.fillInBlankConfig.blanks.map(b => (
+                      <div key={b.id}>
+                        <strong className="text-indigo-700">[{b.id}]:</strong> {b.correctAnswers.join(' HOẶC ')}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {q.type === 'dropdown_choice' && q.dropdownChoiceConfig && (
+                  <div className="p-2.5 bg-white rounded-lg border border-slate-200 space-y-1">
+                    {q.dropdownChoiceConfig.dropdowns.map(d => (
+                      <div key={d.id}>
+                        <strong className="text-indigo-700">[{d.id}]:</strong> {d.correctOption}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {q.type === 'matching' && q.matchingConfig && (
+                  <div className="p-2.5 bg-white rounded-lg border border-slate-200 space-y-1">
+                    {q.matchingConfig.pairs.map((p, pIdx) => (
+                      <div key={pIdx}>
+                        Cặp ghép đúng: <strong className="text-indigo-700">{p.leftId}</strong> ➔ <strong className="text-emerald-700">{p.rightId}</strong>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {q.type === 'ordering' && q.orderingConfig && (
+                  <div className="p-2.5 bg-white rounded-lg border border-slate-200">
+                    Thứ tự đúng: <strong className="text-indigo-700 font-mono">{q.orderingConfig.correctOrder.join(' ➔ ')}</strong>
+                  </div>
+                )}
+
+                {q.type === 'multiple_select' && q.multipleSelectConfig && (
+                  <div className="p-2.5 bg-white rounded-lg border border-slate-200">
+                    Các đáp án đúng: <strong className="text-emerald-700 font-bold">{q.multipleSelectConfig.correctAnswers.join(', ')}</strong>
+                  </div>
+                )}
+
+                {q.solution && (
+                  <div className="p-2.5 bg-white rounded-lg border border-slate-200 text-slate-600">
+                    <strong>Lời giải:</strong> <MathRenderer content={q.solution} />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

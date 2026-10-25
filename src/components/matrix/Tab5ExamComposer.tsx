@@ -688,11 +688,18 @@ export const Tab5ExamComposer: React.FC<Tab5ExamComposerProps> = ({
                   onChange={e => setFilterType(e.target.value)}
                   className="px-2 py-1 text-xs rounded border border-slate-300"
                 >
-                  <option value="all">Tất cả định dạng</option>
-                  <option value="multiple_choice">Trắc nghiệm 4 LC</option>
-                  <option value="true_false">Đúng / Sai</option>
-                  <option value="short_answer">Trả lời ngắn</option>
-                  <option value="essay">Tự luận</option>
+                  <option value="all">Tất cả định dạng (11 Dạng)</option>
+                  <option value="multiple_choice">1. Trắc nghiệm 4 LC</option>
+                  <option value="true_false">2. Đúng / Sai (4 ý)</option>
+                  <option value="short_answer">3. Trả lời ngắn</option>
+                  <option value="essay">4. Tự luận rubric</option>
+                  <option value="true_false_single">5. Đúng / Sai đơn</option>
+                  <option value="numeric_answer">6. Trả lời bằng số</option>
+                  <option value="fill_in_blank">7. Điền chỗ trống</option>
+                  <option value="dropdown_choice">8. Điền chọn Dropdown</option>
+                  <option value="matching">9. Nối đôi Cột A-B</option>
+                  <option value="ordering">10. Sắp xếp thứ tự</option>
+                  <option value="multiple_select">11. Chọn nhiều đáp án</option>
                 </select>
                 <select
                   value={filterTopic}

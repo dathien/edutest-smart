@@ -57,16 +57,105 @@ export interface Student {
 export type CognitiveLevel = 'nhan_biet' | 'thong_hieu' | 'van_dung' | 'van_dung_cao';
 
 export type QuestionType = 
-  | 'multiple_choice' // Trắc nghiệm 4 lựa chọn (A, B, C, D)
-  | 'true_false'       // Trắc nghiệm đúng/sai (ý a, b, c, d)
-  | 'short_answer'     // Trả lời ngắn
-  | 'essay';           // Tự luận
+  | 'multiple_choice'    // 1. Trắc nghiệm 4 lựa chọn (A, B, C, D)
+  | 'true_false_single' // 2. Đúng/Sai một mệnh đề (Đúng / Sai)
+  | 'true_false'        // 3. Đúng/Sai nhiều mệnh đề (ý a, b, c, d - Công văn 7991)
+  | 'short_answer'      // 4. Trả lời ngắn
+  | 'numeric_answer'    // 5. Trả lời bằng số (sai số epsilon, phân số, đơn vị)
+  | 'essay'             // 6. Tự luận (kèm rubric chấm từng bước)
+  | 'fill_in_blank'     // 7. Điền vào chỗ trống
+  | 'dropdown_choice'   // 8. Điền chọn Dropdown
+  | 'matching'          // 9. Nối đôi (Cột A - Cột B)
+  | 'ordering'          // 10. Sắp xếp thứ tự
+  | 'multiple_select';  // 11. Chọn nhiều đáp án
 
 export interface TrueFalseOption {
   id: 'a' | 'b' | 'c' | 'd';
   text: string;
   isCorrect: boolean; // true = Đúng, false = Sai
   explanation?: string;
+}
+
+// 5. Trả lời bằng số
+export interface NumericAnswerConfig {
+  targetValue: number;
+  tolerance?: number; // Sai số cho phép (vd: 0.01)
+  unit?: string; // Đơn vị tính (vd: cm, m^2, rad)
+  allowFractions?: boolean; // Cho phép nhập dạng phân số a/b
+  displayAnswer?: string; // Hiển thị chuẩn vd: "3/4" hoặc "0.75"
+}
+
+// 7. Điền vào chỗ trống
+export interface FillInBlankItem {
+  id: string; // vd: "blank_1"
+  label?: string; // vd: "(1)"
+  correctAnswers: string[]; // Danh sách đáp án được chấp nhận
+  caseSensitive?: boolean;
+}
+
+export interface FillInBlankConfig {
+  template: string; // Đoạn văn bản chứa các placeholder vd: "Hàm số đồng biến trên khoảng [blank_1] và nghịch biến trên [blank_2]."
+  blanks: FillInBlankItem[];
+}
+
+// 8. Điền chọn Dropdown
+export interface DropdownChoiceItem {
+  id: string; // vd: "dropdown_1"
+  label?: string; // vd: "Lựa chọn (1)"
+  options: string[]; // Các phương án trong dropdown
+  correctOption: string;
+}
+
+export interface DropdownChoiceConfig {
+  template: string; // Đoạn văn bản chứa placeholder vd: "Đồ thị hàm số có tiệm cận đứng là [dropdown_1] và tiệm cận ngang là [dropdown_2]."
+  dropdowns: DropdownChoiceItem[];
+}
+
+// 9. Nối đôi
+export interface MatchingItem {
+  id: string; // vd: "A1", "A2" hoặc "B1", "B2"
+  text: string;
+}
+
+export interface MatchingConfig {
+  leftItems: MatchingItem[]; // Nhóm A (ví dụ: Tên hàm số)
+  rightItems: MatchingItem[]; // Nhóm B (ví dụ: Tập xác định / Đạo hàm tương ứng)
+  pairs: { leftId: string; rightId: string }[]; // Cặp ghép đúng
+}
+
+// 10. Sắp xếp thứ tự
+export interface OrderingItem {
+  id: string;
+  text: string;
+}
+
+export interface OrderingConfig {
+  items: OrderingItem[];
+  correctOrder: string[]; // Mảng các ID theo thứ tự chính xác từ đầu đến cuối
+}
+
+// 11. Chọn nhiều đáp án
+export interface MultipleSelectConfig {
+  options: string[]; // Danh sách các lựa chọn [A, B, C, D, E...]
+  correctAnswers: string[]; // Các lựa chọn đúng (vd: ["A", "C", "D"])
+  partialScoring?: boolean; // Có tính điểm thành phần hay không
+}
+
+// Bảng biến thiên tùy chỉnh chi tiết
+export interface CustomVariationTableData {
+  xPoints: string[]; // vd: ["-\\infty", "-1", "2", "+\\infty"]
+  yPrimeSigns: string[]; // vd: ["+", "0", "-", "||", "+"]
+  yValues: string[]; // vd: ["-\\infty", "4", "-3", "+\\infty"]
+  arrowDirections?: ('up' | 'down')[];
+  title?: string;
+  isFractionalUndefined?: boolean;
+}
+
+// Bảng xét dấu đạo hàm / tam thức
+export interface SignTableData {
+  label: string; // vd: "f'(x)" hoặc "x^2 - 4x + 3"
+  xPoints: string[]; // vd: ["-\\infty", "1", "3", "+\\infty"]
+  signs: string[]; // vd: ["+", "0", "-", "0", "+"]
 }
 
 export interface Question {
@@ -81,11 +170,18 @@ export interface Question {
   prompt: string; // LaTeX + text supported
   options?: string[]; // For multiple_choice [A, B, C, D]
   correctAnswer?: string; // "A" | "B" | "C" | "D" or short answer string
-  trueFalseOptions?: TrueFalseOption[]; // For true_false
+  trueFalseOptions?: TrueFalseOption[]; // For true_false (4 items a,b,c,d)
+  singleTrueFalseAnswer?: boolean; // For true_false_single (Đúng/Sai đơn)
+  numericAnswerConfig?: NumericAnswerConfig; // For numeric_answer
+  fillInBlankConfig?: FillInBlankConfig; // For fill_in_blank
+  dropdownChoiceConfig?: DropdownChoiceConfig; // For dropdown_choice
+  matchingConfig?: MatchingConfig; // For matching
+  orderingConfig?: OrderingConfig; // For ordering
+  multipleSelectConfig?: MultipleSelectConfig; // For multiple_select
   rubricGuide?: string; // For essay: hướng dẫn chấm
   points: number; // Điểm câu hỏi
   solution: string; // Lời giải chi tiết
-  diagramType?: 'geometry' | 'function_curve' | 'variation_table' | 'coordinate_system' | 'custom_svg';
+  diagramType?: 'geometry' | 'function_curve' | 'variation_table' | 'coordinate_system' | 'custom_variation_table' | 'sign_table' | 'custom_svg';
   diagramData?: string;
   authorId: string;
   authorName: string;
@@ -182,13 +278,42 @@ export interface ViolationEvent {
 export interface SubmissionAnswer {
   questionId: string;
   type: QuestionType;
-  selectedOption?: string; // A, B, C, D
-  trueFalseAnswers?: { [key in 'a' | 'b' | 'c' | 'd']?: boolean };
-  shortAnswerText?: string;
-  essayContent?: string;
+  selectedOption?: string; // A, B, C, D (for multiple_choice, true_false_single)
+  trueFalseAnswers?: { [key in 'a' | 'b' | 'c' | 'd']?: boolean }; // For true_false
+  shortAnswerText?: string; // For short_answer
+  numericAnswer?: string | number; // For numeric_answer
+  essayContent?: string; // For essay
+  blankAnswers?: { [blankId: string]: string }; // For fill_in_blank
+  dropdownAnswers?: { [dropdownId: string]: string }; // For dropdown_choice
+  matchingPairs?: { [leftId: string]: string }; // For matching: leftId -> rightId
+  orderAnswer?: string[]; // For ordering: array of item IDs in chosen order
+  multipleSelectAnswers?: string[]; // For multiple_select: array of chosen options
   isCorrect?: boolean;
   awardedPoints: number;
   teacherFeedback?: string;
+}
+
+export interface ExamDossier {
+  id: string;
+  code: string;
+  title: string;
+  subject: string;
+  grade: number;
+  academicYear: string;
+  semester: string;
+  examType: ExamType | string;
+  matrixId: string;
+  matrixTitle: string;
+  specificationId?: string;
+  specificationTitle?: string;
+  examId: string;
+  examTitle: string;
+  rubricGuideAvailable: boolean;
+  authorName: string;
+  issuingUnit: string;
+  auditStatus: 'draft' | 'under_review' | 'needs_revision' | 'approved' | 'published';
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ExamSubmission {

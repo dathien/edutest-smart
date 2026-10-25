@@ -217,33 +217,66 @@ export const MatrixLibraryView: React.FC<MatrixLibraryViewProps> = ({
         </div>
       </div>
 
-      {/* 8-Tab Navigation Bar */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-2xs p-1.5 overflow-x-auto">
-        <div className="flex items-center gap-1 min-w-max">
-          {subTabs.map(tab => {
+      {/* 8 Chức năng - Bố trí dạng lưới responsive (Desktop: 4 cột × 2 hàng, Tablet: 2 cột, Mobile: 1-2 cột) */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+            <span>Phân hệ 8 chức năng biên soạn & kiểm định</span>
+            <span className="text-[11px] font-normal text-slate-400 font-mono">(4 cột × 2 hàng)</span>
+          </div>
+          <span className="text-xs text-indigo-700 font-medium">
+            Đang mở: <strong className="font-bold">{subTabs.find(t => t.id === activeSubTab)?.label}</strong>
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {subTabs.map((tab, idx) => {
             const Icon = tab.icon;
             const isActive = activeSubTab === tab.id;
             return (
               <button
                 key={tab.id}
+                type="button"
                 onClick={() => handleSubTabChange(tab.id as AuthoringSubTab)}
-                className={`inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg transition-all ${
+                className={`text-left p-3.5 rounded-xl border transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer ${
                   isActive
-                    ? 'bg-indigo-600 text-white shadow-2xs font-bold'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                    ? 'bg-indigo-600 text-white border-indigo-700 shadow-md ring-2 ring-indigo-300 ring-offset-1'
+                    : 'bg-white hover:bg-slate-50 text-slate-800 border-slate-200 shadow-2xs hover:border-slate-300'
                 }`}
               >
-                <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-500'}`} />
-                <span>{tab.label}</span>
-                {tab.badge && (
-                  <span
-                    className={`px-1.5 py-0.2 rounded text-[10px] font-mono ${
-                      isActive ? 'bg-indigo-800 text-indigo-100' : 'bg-slate-100 text-slate-500'
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <div
+                    className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                      isActive ? 'bg-white/20 text-white' : 'bg-indigo-50 text-indigo-700'
                     }`}
                   >
-                    {tab.badge}
-                  </span>
-                )}
+                    <Icon className="w-4 h-4" />
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {tab.badge && (
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[11px] font-bold font-mono ${
+                          isActive ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-600'
+                        }`}
+                      >
+                        {tab.badge}
+                      </span>
+                    )}
+                    <span
+                      className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${
+                        isActive ? 'bg-indigo-900/60 text-indigo-100' : 'bg-slate-100 text-slate-400'
+                      }`}
+                    >
+                      0{idx + 1}
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <div className={`text-sm font-bold leading-snug ${isActive ? 'text-white' : 'text-slate-900'}`}>
+                    {tab.label}
+                  </div>
+                </div>
               </button>
             );
           })}
