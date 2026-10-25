@@ -397,14 +397,14 @@ export const ExamRoomView: React.FC<ExamRoomViewProps> = ({
                 </div>
 
                 {/* Prompt with LaTeX */}
-                <div className="text-sm font-medium text-slate-900 leading-relaxed pt-2">
+                <div className="question-prompt text-[18px] font-medium text-slate-900 leading-relaxed pt-2">
                   <MathRenderer content={currentQ.prompt} />
                 </div>
 
                 {/* Diagram if available */}
                 {currentQ.diagramType && (
-                  <div className="py-2">
-                    <GeometryDiagram type={currentQ.diagramType} data={currentQ.diagramData} />
+                  <div className="py-2.5">
+                    <GeometryDiagram type={currentQ.diagramType} data={currentQ.diagramData} allowAdjust={false} />
                   </div>
                 )}
 
@@ -412,7 +412,7 @@ export const ExamRoomView: React.FC<ExamRoomViewProps> = ({
                 <div className="pt-4">
                   {/* Type 1: Multiple Choice */}
                   {currentQ.type === 'multiple_choice' && currentQ.options && (
-                    <div className="space-y-2.5">
+                    <div className="space-y-3">
                       {currentQ.options.map((opt, oIdx) => {
                         const letter = ['A', 'B', 'C', 'D'][oIdx];
                         const isSelected = answers[currentQ.id]?.selectedOption === letter;
@@ -420,20 +420,20 @@ export const ExamRoomView: React.FC<ExamRoomViewProps> = ({
                           <div
                             key={oIdx}
                             onClick={() => handleAnswerMC(currentQ.id, letter)}
-                            className={`p-3.5 rounded-xl border text-xs cursor-pointer flex items-start gap-3 transition-all ${
+                            className={`p-3.5 rounded-xl border text-[17px] leading-normal cursor-pointer flex items-start gap-3 transition-all ${
                               isSelected
-                                ? 'bg-indigo-50 border-indigo-500 ring-2 ring-indigo-200 font-semibold text-indigo-900'
-                                : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'
+                                ? 'bg-indigo-50/90 border-indigo-600 ring-2 ring-indigo-200 font-semibold text-indigo-950 shadow-xs'
+                                : 'bg-white border-slate-200 hover:bg-slate-50/80 text-slate-800'
                             }`}
                           >
                             <span
-                              className={`w-6 h-6 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${
+                              className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 mt-0.5 ${
                                 isSelected ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700'
                               }`}
                             >
                               {letter}
                             </span>
-                            <div className="pt-0.5 flex-1">
+                            <div className="flex-1 font-medium overflow-x-auto text-slate-900">
                               <MathRenderer content={opt} />
                             </div>
                           </div>
@@ -445,20 +445,20 @@ export const ExamRoomView: React.FC<ExamRoomViewProps> = ({
                   {/* Type 2: True / False (GDPT 2018 CV 7991) */}
                   {currentQ.type === 'true_false' && currentQ.trueFalseOptions && (
                     <div className="space-y-3">
-                      <div className="text-xs font-bold text-slate-700">
+                      <div className="text-xs font-bold text-slate-700 uppercase tracking-wide">
                         Chọn Đúng (Đ) hoặc Sai (S) cho từng ý dưới đây:
                       </div>
-                      <div className="space-y-2">
+                      <div className="space-y-2.5">
                         {currentQ.trueFalseOptions.map((item) => {
                           const currentVal = answers[currentQ.id]?.trueFalseAnswers?.[item.id];
                           return (
                             <div
                               key={item.id}
-                              className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                              className="p-3.5 rounded-xl bg-slate-50/90 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-[17px] leading-normal"
                             >
-                              <div className="flex items-start gap-2 flex-1">
-                                <span className="font-bold text-indigo-700 uppercase">{item.id})</span>
-                                <div className="text-slate-800">
+                              <div className="flex items-start gap-2.5 flex-1">
+                                <span className="font-bold text-indigo-700 uppercase shrink-0">{item.id})</span>
+                                <div className="text-slate-900 font-medium">
                                   <MathRenderer content={item.text} />
                                 </div>
                               </div>
@@ -467,10 +467,10 @@ export const ExamRoomView: React.FC<ExamRoomViewProps> = ({
                                 <button
                                   type="button"
                                   onClick={() => handleAnswerTF(currentQ.id, item.id, true)}
-                                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                                     currentVal === true
                                       ? 'bg-emerald-600 text-white shadow-xs'
-                                      : 'bg-white border border-slate-300 text-slate-600 hover:bg-emerald-50'
+                                      : 'bg-white border border-slate-300 text-slate-700 hover:bg-emerald-50'
                                   }`}
                                 >
                                   Đúng
@@ -478,10 +478,10 @@ export const ExamRoomView: React.FC<ExamRoomViewProps> = ({
                                 <button
                                   type="button"
                                   onClick={() => handleAnswerTF(currentQ.id, item.id, false)}
-                                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                                     currentVal === false
                                       ? 'bg-rose-600 text-white shadow-xs'
-                                      : 'bg-white border border-slate-300 text-slate-600 hover:bg-rose-50'
+                                      : 'bg-white border border-slate-300 text-slate-700 hover:bg-rose-50'
                                   }`}
                                 >
                                   Sai

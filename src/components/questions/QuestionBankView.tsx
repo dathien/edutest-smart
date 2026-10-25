@@ -22,6 +22,7 @@ import { Question, QuestionType, CognitiveLevel, User, Subject } from '../../typ
 import { StorageService } from '../../services/storage';
 import { MathRenderer } from '../MathRenderer';
 import { GeometryDiagram } from '../GeometryDiagram';
+import { MathShowcaseModal } from './MathShowcaseModal';
 import { playSound } from '../../services/sound';
 
 interface QuestionBankViewProps {
@@ -46,6 +47,7 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
   // Modals
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showMathModal, setShowMathModal] = useState(false);
   const [previewQuestion, setPreviewQuestion] = useState<Question | null>(null);
 
   // Form states for new question
@@ -208,13 +210,23 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => {
+                setShowMathModal(true);
+                playSound('notification');
+              }}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer"
+            >
+              <Sparkles className="w-4 h-4 text-amber-300" /> Kiểm thử chuẩn Toán học (9 mẫu)
+            </button>
+
             <button
               onClick={() => {
                 setShowImportModal(true);
                 playSound('click');
               }}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-colors shadow-xs"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-colors shadow-xs cursor-pointer"
             >
               <Upload className="w-4 h-4" /> Nhập từ Word / Excel
             </button>
@@ -224,7 +236,7 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
                 setShowCreateModal(true);
                 playSound('click');
               }}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-colors shadow-xs"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-colors shadow-xs cursor-pointer"
             >
               <Plus className="w-4 h-4" /> Soạn câu hỏi mới
             </button>
@@ -367,43 +379,43 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
               </div>
 
               {/* Question Prompt with LaTeX & Diagram */}
-              <div className="text-sm text-slate-800 leading-relaxed pt-1">
+              <div className="question-prompt text-[18px] text-slate-900 leading-relaxed font-medium pt-1">
                 <MathRenderer content={q.prompt} />
               </div>
 
               {/* Diagram if available */}
               {q.diagramType && (
-                <div className="pt-1">
-                  <GeometryDiagram type={q.diagramType} data={q.diagramData} />
+                <div className="pt-2 pb-1">
+                  <GeometryDiagram type={q.diagramType} data={q.diagramData} allowAdjust={false} />
                 </div>
               )}
 
               {/* Multiple Choice Options */}
               {q.type === 'multiple_choice' && q.options && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 pt-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
                   {q.options.map((opt, oIdx) => {
                     const letter = ['A', 'B', 'C', 'D'][oIdx];
                     const isCorrect = q.correctAnswer === letter;
                     return (
                       <div
                         key={oIdx}
-                        className={`p-2.5 rounded-xl border text-xs flex items-start gap-2.5 ${
+                        className={`p-3 rounded-xl border text-[17px] leading-normal flex items-start gap-3 transition-colors ${
                           isCorrect
-                            ? 'bg-emerald-50/80 border-emerald-300 text-emerald-900 font-semibold'
-                            : 'bg-slate-50/60 border-slate-200 text-slate-700'
+                            ? 'bg-emerald-50/90 border-emerald-400 text-emerald-950 font-semibold shadow-2xs'
+                            : 'bg-slate-50/80 border-slate-200 text-slate-800'
                         }`}
                       >
                         <span
-                          className={`w-5 h-5 rounded-md flex items-center justify-center font-bold shrink-0 ${
+                          className={`w-6 h-6 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 mt-0.5 ${
                             isCorrect ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700'
                           }`}
                         >
                           {letter}
                         </span>
-                        <div className="pt-0.5 flex-1">
+                        <div className="flex-1 font-medium text-slate-900 overflow-x-auto">
                           <MathRenderer content={opt} />
                         </div>
-                        {isCorrect && <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />}
+                        {isCorrect && <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />}
                       </div>
                     );
                   })}
@@ -412,30 +424,30 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
 
               {/* True / False 4-item grid */}
               {q.type === 'true_false' && q.trueFalseOptions && (
-                <div className="space-y-1.5 pt-2">
-                  <div className="text-xs font-semibold text-slate-500">Mệnh đề xét tính Đúng / Sai:</div>
-                  <div className="grid grid-cols-1 gap-2">
+                <div className="space-y-2 pt-2">
+                  <div className="text-xs font-bold text-slate-600 uppercase tracking-wide">Mệnh đề xét tính Đúng / Sai:</div>
+                  <div className="grid grid-cols-1 gap-2.5">
                     {q.trueFalseOptions.map((item) => (
                       <div
                         key={item.id}
-                        className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs flex items-center justify-between gap-3"
+                        className="p-3 rounded-xl bg-slate-50/90 border border-slate-200 text-[17px] flex items-center justify-between gap-3"
                       >
-                        <div className="flex items-start gap-2">
-                          <span className="font-bold text-indigo-700 uppercase">{item.id})</span>
-                          <div>
+                        <div className="flex items-start gap-2.5">
+                          <span className="font-bold text-indigo-700 uppercase shrink-0">{item.id})</span>
+                          <div className="font-medium text-slate-900">
                             <MathRenderer content={item.text} />
                             {item.explanation && (
-                              <p className="text-[11px] text-slate-500 mt-0.5 italic">
+                              <p className="text-[13px] text-slate-500 mt-1 italic font-normal">
                                 Giải thích: {item.explanation}
                               </p>
                             )}
                           </div>
                         </div>
                         <span
-                          className={`px-2 py-0.5 rounded text-[11px] font-bold ${
+                          className={`px-3 py-1 rounded-lg text-xs font-bold shrink-0 ${
                             item.isCorrect
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : 'bg-rose-100 text-rose-800'
+                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                              : 'bg-rose-100 text-rose-800 border border-rose-200'
                           }`}
                         >
                           {item.isCorrect ? 'ĐÚNG' : 'SAI'}
@@ -836,6 +848,12 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Modal: Math Showcase & Verification Suite */}
+      <MathShowcaseModal
+        isOpen={showMathModal}
+        onClose={() => setShowMathModal(false)}
+      />
     </div>
   );
 };

@@ -194,13 +194,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       </div>
                       <div className="flex-1 pr-1">
                         {/* Full label without ellipsis */}
-                        <div className="text-[14px] leading-tight font-semibold break-words">
+                        <div className="text-[15px] leading-snug font-semibold break-words">
                           {item.label}
                         </div>
                         {item.subLabel && (
                           <div
-                            className={`text-[11px] leading-tight mt-0.5 break-words hidden 2xl:block ${
-                              isActive ? 'text-white/80' : 'text-slate-400 group-hover:text-indigo-500'
+                            className={`text-[12.5px] leading-snug mt-0.5 break-words hidden 2xl:block ${
+                              isActive ? 'text-white/85' : 'text-slate-400 group-hover:text-indigo-500'
                             }`}
                           >
                             {item.subLabel}

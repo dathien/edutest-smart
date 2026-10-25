@@ -1,5 +1,70 @@
 @import "tailwindcss";
 
+:root {
+  --font-main: "Inter", Arial, sans-serif;
+
+  --text-xs: 13px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 18px;
+  --text-xl: 22px;
+  --text-2xl: 26px;
+
+  --text-primary: #172033;
+  --text-secondary: #52627A;
+
+  --line-height-body: 1.6;
+}
+
+html, body {
+  font-family: var(--font-main);
+  color: var(--text-primary);
+  line-height: var(--line-height-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+button, input, select, textarea {
+  font-family: var(--font-main);
+}
+
+/* Question & Math typography rules */
+.question-prompt {
+  font-size: var(--text-lg); /* 18px */
+  line-height: 1.65;
+  color: #0f172a;
+}
+
+.question-option {
+  font-size: 17px;
+  line-height: 1.55;
+}
+
+.math-content {
+  font-size: 1.05em;
+  color: inherit;
+}
+
+/* KaTeX refinement for high contrast and readability */
+.katex {
+  font-size: 1.08em;
+  text-rendering: auto;
+  line-height: 1.25;
+}
+
+.katex-display {
+  margin: 0.75em 0 !important;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 4px 0;
+}
+
+.katex .mord, .katex .mbin, .katex .mrel, .katex .mopen, .katex .mclose {
+  color: inherit;
+}
+
+/* Smooth keyframes */
 @keyframes fadeInSlide {
   0% {
     opacity: 0.2;
