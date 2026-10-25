@@ -1,0 +1,6 @@
+{
+  "name": "EduTest Smart - Hệ thống Kiểm tra Đánh giá & Quản lý Lớp học",
+  "description": "Nền tảng kiểm tra, đánh giá và quản lý lớp học thông minh THPT GDPT 2018 với thư viện ma trận, bản đặc tả, ngân hàng câu hỏi Toán, phòng thi trực tuyến và trò chơi học tập.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
