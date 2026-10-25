@@ -1,14 +1,49 @@
+import katex from 'katex';
+
 /**
- * Document Export Utility for EduTest Smart
- * Generates Word (.doc) and printable HTML documents for Matrices, Specifications, Exams, and Rubrics.
+ * Converts raw LaTeX expressions ($...$, $$...$$, \(...\), \[...\])
+ * into clean KaTeX HTML + MathML strings for Word documents and printing.
  */
+export function renderLatexToHtmlString(text: string): string {
+  if (!text) return '';
+
+  // 1. Replace display-mode formulas ($$...$$ or \[...\])
+  let result = text.replace(/(\$\$|\\\[)([\s\S]*?)(\$\$|\\\])/g, (_match, _open, formula) => {
+    try {
+      return `<div class="math-display" style="text-align: center; margin: 6pt 0;">${katex.renderToString(formula.trim(), {
+        displayMode: true,
+        throwOnError: false,
+        output: 'htmlAndMathml',
+      })}</div>`;
+    } catch {
+      return formula;
+    }
+  });
+
+  // 2. Replace inline-mode formulas ($...$ or \(...\))
+  result = result.replace(/(\$|\\\()([^\$]+?)(\$|\\\))/g, (_match, _open, formula) => {
+    try {
+      return katex.renderToString(formula.trim(), {
+        displayMode: false,
+        throwOnError: false,
+        output: 'htmlAndMathml',
+      });
+    } catch {
+      return formula;
+    }
+  });
+
+  return result;
+}
 
 export function downloadWordDocument(filename: string, title: string, htmlContent: string) {
+  const processedContent = renderLatexToHtmlString(htmlContent);
   const header = `<!DOCTYPE html>
 <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
 <head>
   <meta charset='utf-8'>
   <title>${title}</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
   <style>
     body {
       font-family: 'Times New Roman', 'Arial', sans-serif;
@@ -49,10 +84,11 @@ export function downloadWordDocument(filename: string, title: string, htmlConten
       margin-left: 20pt;
       margin-bottom: 8pt;
     }
+    .katex { font-size: 1.05em; }
   </style>
 </head>
 <body>
-${htmlContent}
+${processedContent}
 </body>
 </html>`;
 
@@ -73,11 +109,14 @@ export function printDocument(title: string, htmlContent: string) {
   const printWindow = window.open('', '_blank', 'width=900,height=700');
   if (!printWindow) return;
 
+  const processedContent = renderLatexToHtmlString(htmlContent);
+
   printWindow.document.write(`<!DOCTYPE html>
 <html>
 <head>
   <meta charset='utf-8'>
   <title>${title}</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
   <style>
     @page {
       size: A4;
@@ -109,13 +148,14 @@ export function printDocument(title: string, htmlContent: string) {
     .text-right { text-align: right; }
     .font-bold { font-weight: bold; }
     .header-table td { border: none !important; }
+    .katex { font-size: 1.05em; }
     @media print {
       body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     }
   </style>
 </head>
 <body>
-  ${htmlContent}
+  ${processedContent}
   <script>
     window.onload = function() {
       window.print();

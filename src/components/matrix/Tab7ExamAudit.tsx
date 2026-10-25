@@ -20,6 +20,7 @@ import {
 } from '../../types';
 import { StorageService } from '../../services/storage';
 import { playSound } from '../../services/sound';
+import { MathValidator } from '../../services/mathValidator';
 
 interface Tab7ExamAuditProps {
   currentUser: User;
@@ -178,18 +179,41 @@ export const Tab7ExamAudit: React.FC<Tab7ExamAuditProps> = ({
       required: true,
     });
 
-    // 7. Công thức Toán học KaTeX hợp lệ
+    // 7. Công thức Toán học KaTeX hợp lệ (Kiểm tra prompt, options, solution bằng MathValidator)
     const invalidLatexQ = qList.filter(q => {
-      const openMatches = (q.prompt.match(/\$/g) || []).length;
-      return openMatches % 2 !== 0; // unmatched $
+      const promptCheck = MathValidator.validateLatex(q.prompt || '');
+      if (!promptCheck.isValid) return true;
+
+      if (q.options) {
+        const optionInvalid = q.options.some(opt => !MathValidator.validateLatex(opt).isValid);
+        if (optionInvalid) return true;
+      }
+
+      if (q.trueFalseOptions) {
+        const tfInvalid = q.trueFalseOptions.some(opt => !MathValidator.validateLatex(opt.text).isValid);
+        if (tfInvalid) return true;
+      }
+
+      if (q.solution) {
+        const solCheck = MathValidator.validateLatex(q.solution);
+        if (!solCheck.isValid) return true;
+      }
+
+      return false;
     });
     results.push({
       id: 7,
       title: 'Cú pháp công thức Toán KaTeX hợp lệ',
       category: 'Kỹ thuật',
       status: invalidLatexQ.length === 0 ? 'pass' : 'warning',
-      description: invalidLatexQ.length === 0 ? 'Không phát hiện lỗi đóng/mở thẻ $' : `Có ${invalidLatexQ.length} câu có dấu $ chưa đóng`,
-      detail: invalidLatexQ.length === 0 ? 'Hiển thị KaTeX chuẩn xác' : 'Kiểm tra lại cặp dấu $ trong nội dung',
+      description:
+        invalidLatexQ.length === 0
+          ? 'Tất cả biểu thức, dấu ngoặc, ký hiệu toán KaTeX chuẩn xác'
+          : `Có ${invalidLatexQ.length} câu chứa cú pháp LaTeX chưa tối ưu`,
+      detail:
+        invalidLatexQ.length === 0
+          ? 'Đạt chuẩn 100% công thức toán học'
+          : `Mã câu cần xem xét: ${invalidLatexQ.map(q => q.code).join(', ')}`,
       required: false,
     });
 

@@ -656,6 +656,23 @@ export const Tab5ExamComposer: React.FC<Tab5ExamComposerProps> = ({
                     <div className="text-sm text-slate-800 leading-snug">
                       <MathRenderer content={q.prompt} />
                     </div>
+
+                    {q.diagramType && (
+                      <div className="my-2 flex justify-center">
+                        <GeometryDiagram type={q.diagramType} data={q.diagramData} allowAdjust={false} />
+                      </div>
+                    )}
+
+                    {q.options && q.type === 'multiple_choice' && (
+                      <div className="grid grid-cols-2 gap-1.5 pt-1 text-xs text-slate-600 bg-slate-50 p-2 rounded-lg border border-slate-100">
+                        {q.options.map((opt, i) => (
+                          <div key={i} className={q.correctAnswer === String.fromCharCode(65 + i) ? 'font-bold text-indigo-700' : ''}>
+                            <span>{String.fromCharCode(65 + i)}. </span>
+                            <MathRenderer content={opt} />
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -843,6 +860,11 @@ export const Tab5ExamComposer: React.FC<Tab5ExamComposerProps> = ({
                         <div className="font-medium">
                           <strong>Câu {idx + 1}:</strong> <MathRenderer content={q.prompt} />
                         </div>
+                        {q.diagramType && (
+                          <div className="my-2 flex justify-center">
+                            <GeometryDiagram type={q.diagramType} data={q.diagramData} allowAdjust={false} />
+                          </div>
+                        )}
                         {q.options && (
                           <div className="grid grid-cols-2 gap-2 pl-4 text-xs">
                             {q.options.map((opt, i) => (
@@ -869,6 +891,11 @@ export const Tab5ExamComposer: React.FC<Tab5ExamComposerProps> = ({
                         <div className="font-medium">
                           <strong>Câu {idx + 1}:</strong> <MathRenderer content={q.prompt} />
                         </div>
+                        {q.diagramType && (
+                          <div className="my-2 flex justify-center">
+                            <GeometryDiagram type={q.diagramType} data={q.diagramData} allowAdjust={false} />
+                          </div>
+                        )}
                         {q.trueFalseOptions && (
                           <div className="space-y-1 pl-4 text-xs">
                             {q.trueFalseOptions.map(opt => (
@@ -896,6 +923,11 @@ export const Tab5ExamComposer: React.FC<Tab5ExamComposerProps> = ({
                         <div className="font-medium">
                           <strong>Câu {idx + 1}:</strong> <MathRenderer content={q.prompt} />
                         </div>
+                        {q.diagramType && (
+                          <div className="my-2 flex justify-center">
+                            <GeometryDiagram type={q.diagramType} data={q.diagramData} allowAdjust={false} />
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -913,6 +945,11 @@ export const Tab5ExamComposer: React.FC<Tab5ExamComposerProps> = ({
                           <strong>Câu {idx + 1} ({q.points} điểm):</strong>{' '}
                           <MathRenderer content={q.prompt} />
                         </div>
+                        {q.diagramType && (
+                          <div className="my-2 flex justify-center">
+                            <GeometryDiagram type={q.diagramType} data={q.diagramData} allowAdjust={false} />
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

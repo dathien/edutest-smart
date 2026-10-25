@@ -352,17 +352,16 @@ export const GradingView: React.FC<GradingViewProps> = ({
               {/* Question reference */}
               <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1">
                 <span className="font-bold text-indigo-700">Đề bài tự luận (2.0 điểm):</span>
-                <p className="text-slate-700">
-                  Cho hình chóp tứ giác đều $S.ABCD$ có đáy $ABCD$ là hình vuông cạnh $a$, các cạnh bên bằng $a\sqrt{'{2}'}$.
-                  Tính độ dài đường cao $SO$ và thể tích khối chóp $S.ABCD$.
-                </p>
+                <div className="text-slate-700">
+                  <MathRenderer content="Cho hình chóp tứ giác đều $S.ABCD$ có đáy $ABCD$ là hình vuông cạnh $a$, các cạnh bên bằng $a\sqrt{2}$. Tính độ dài đường cao $SO$ và thể tích khối chóp $S.ABCD$." />
+                </div>
               </div>
 
               {/* Student's submitted answer */}
               <div className="space-y-1">
                 <label className="block text-xs font-bold text-slate-700">Bài làm của học sinh:</label>
-                <div className="p-3.5 bg-indigo-50/40 border border-indigo-200 rounded-xl text-xs text-slate-800 font-mono whitespace-pre-line">
-                  {gradingSubmission.answers['q-math-12-06']?.essayContent || 'Học sinh chưa nhập nội dung tự luận'}
+                <div className="p-3.5 bg-indigo-50/40 border border-indigo-200 rounded-xl text-xs text-slate-800 leading-relaxed">
+                  <MathRenderer content={gradingSubmission.answers['q-math-12-06']?.essayContent || 'Học sinh chưa nhập nội dung tự luận'} />
                 </div>
               </div>
 

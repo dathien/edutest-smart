@@ -40,6 +40,9 @@ import { GeometryDiagram } from '../GeometryDiagram';
 import { VariationTableRenderer } from '../VariationTableRenderer';
 import { FunctionGraphRenderer } from '../FunctionGraphRenderer';
 import { SignTableRenderer } from '../SignTableRenderer';
+import { MathEditor } from '../math/MathEditor';
+import { InteractiveGeometryDrawer } from '../geometry/InteractiveGeometryDrawer';
+import { MathTestSuiteModal } from '../math/MathTestSuiteModal';
 
 interface Tab4QuestionAuthoringProps {
   currentUser: User;
@@ -181,6 +184,11 @@ export const Tab4QuestionAuthoring: React.FC<Tab4QuestionAuthoringProps> = ({
   const [signPoints, setSignPoints] = useState<string>('-\\infty, -1, 2, +\\infty');
   const [signValues, setSignValues] = useState<string>('+, 0, -, 0, +');
 
+  // Modal States
+  const [showGeometryDrawer, setShowGeometryDrawer] = useState(false);
+  const [showMathTestSuite, setShowMathTestSuite] = useState(false);
+  const [customGeometryData, setCustomGeometryData] = useState<string>('');
+
   // Quick Math Insert Helper
   const handleInsertSymbol = (latex: string) => {
     playSound('click');
@@ -321,7 +329,7 @@ export const Tab4QuestionAuthoring: React.FC<Tab4QuestionAuthoringProps> = ({
       } else if (diagramType === 'function_curve') {
         newQ.diagramData = JSON.stringify({ preset: graphType });
       } else if (diagramType === 'geometry') {
-        newQ.diagramData = JSON.stringify({ shape: geometryShape });
+        newQ.diagramData = customGeometryData || JSON.stringify({ shape: geometryShape });
       }
     }
 
@@ -372,7 +380,29 @@ export const Tab4QuestionAuthoring: React.FC<Tab4QuestionAuthoringProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setShowGeometryDrawer(true);
+              playSound('click');
+            }}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-xl border border-indigo-200 transition-colors cursor-pointer"
+          >
+            <Layers className="w-4 h-4 text-indigo-600" />
+            Vẽ hình học SVG
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setShowMathTestSuite(true);
+              playSound('click');
+            }}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-xl border border-purple-200 transition-colors cursor-pointer"
+          >
+            <Sparkles className="w-4 h-4 text-purple-600" />
+            Kiểm thử tự động Toán học
+          </button>
           <button
             onClick={handleSaveQuestion}
             className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs transition-colors cursor-pointer"
@@ -538,12 +568,12 @@ export const Tab4QuestionAuthoring: React.FC<Tab4QuestionAuthoringProps> = ({
               </label>
               <span className="text-xs text-slate-400 font-mono">KaTeX Render Ready</span>
             </div>
-            <textarea
+            <MathEditor
+              multiline={true}
               rows={4}
               value={prompt}
-              onChange={e => setPrompt(e.target.value)}
-              className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono bg-white"
-              placeholder="Nhập nội dung đề bài, dùng $công thức$..."
+              onChange={setPrompt}
+              placeholder="Nhập nội dung đề bài, ví dụ: Cho hàm số $y = f(x)$ liên tục trên $\mathbb{R}$..."
             />
           </div>
 
@@ -688,35 +718,73 @@ export const Tab4QuestionAuthoring: React.FC<Tab4QuestionAuthoringProps> = ({
           {/* Format-specific interactive editors */}
           {/* 1. Multiple Choice */}
           {questionType === 'multiple_choice' && (
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-3">
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-                5. Thiết lập 4 phương án lựa chọn & Chọn đáp án đúng
-              </label>
-              {(['A', 'B', 'C', 'D'] as const).map((letter, idx) => (
-                <div key={letter} className="flex items-center gap-3">
-                  <label className="flex items-center gap-1.5 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="correct_answer"
-                      checked={correctAnswer === letter}
-                      onChange={() => setCorrectAnswer(letter)}
-                      className="w-4 h-4 text-indigo-600 cursor-pointer"
-                    />
-                    <span className="font-bold text-sm text-slate-800">{letter}.</span>
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    5. THIẾT LẬP 4 PHƯƠNG ÁN LỰA CHỌN & CHỌN ĐÁP ÁN ĐÚNG
                   </label>
-                  <input
-                    type="text"
-                    value={mcOptions[idx]}
-                    onChange={e => {
-                      const copy = [...mcOptions];
-                      copy[idx] = e.target.value;
-                      setMcOptions(copy);
-                    }}
-                    className="flex-1 px-3 py-2 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono bg-white"
-                    placeholder={`Phương án ${letter}...`}
-                  />
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Hỗ trợ KaTeX rendered trực tiếp. Bấm vào công thức trong bản xem trước để sửa nhanh.
+                  </p>
                 </div>
-              ))}
+                <span className="text-xs text-indigo-700 font-semibold bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-200">
+                  Đáp án đang chọn: <strong>Phương án {correctAnswer}</strong>
+                </span>
+              </div>
+
+              <div className="space-y-3.5">
+                {(['A', 'B', 'C', 'D'] as const).map((letter, idx) => {
+                  const isSelected = correctAnswer === letter;
+                  return (
+                    <div
+                      key={letter}
+                      className={`p-3.5 rounded-xl border transition-all ${
+                        isSelected
+                          ? 'bg-indigo-50/50 border-indigo-300 ring-2 ring-indigo-100'
+                          : 'bg-slate-50/70 border-slate-200'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="correct_answer"
+                            checked={isSelected}
+                            onChange={() => {
+                              setCorrectAnswer(letter);
+                              playSound('click');
+                            }}
+                            className="w-4 h-4 text-indigo-600 cursor-pointer"
+                          />
+                          <span
+                            className={`font-extrabold text-xs px-2.5 py-1 rounded-lg border transition-colors ${
+                              isSelected
+                                ? 'bg-indigo-600 text-white border-indigo-700'
+                                : 'bg-white text-slate-700 border-slate-300'
+                            }`}
+                          >
+                            Phương án {letter}
+                          </span>
+                          {isSelected && (
+                            <span className="text-xs font-bold text-indigo-700">★ Đáp án đúng</span>
+                          )}
+                        </label>
+                      </div>
+
+                      <MathEditor
+                        value={mcOptions[idx]}
+                        onChange={(newVal) => {
+                          const copy = [...mcOptions];
+                          copy[idx] = newVal;
+                          setMcOptions(copy);
+                        }}
+                        placeholder={`Nhập phương án ${letter}, ví dụ: Hàm số đồng biến trên $(-\\infty; -1)$`}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
 
@@ -1150,11 +1218,11 @@ export const Tab4QuestionAuthoring: React.FC<Tab4QuestionAuthoringProps> = ({
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
               6. Lời giải chi tiết & Hướng dẫn chấm
             </label>
-            <textarea
+            <MathEditor
+              multiline={true}
               rows={4}
               value={solution}
-              onChange={e => setSolution(e.target.value)}
-              className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono bg-white"
+              onChange={setSolution}
               placeholder="Giải thích chi tiết lời giải, lý do chọn phương án..."
             />
           </div>
@@ -1220,7 +1288,7 @@ export const Tab4QuestionAuthoring: React.FC<Tab4QuestionAuthoringProps> = ({
 
             {diagramType === 'geometry' && (
               <div className="flex justify-center">
-                <GeometryDiagram type="geometry" data={geometryShape} />
+                <GeometryDiagram type="geometry" data={customGeometryData || geometryShape} />
               </div>
             )}
 
@@ -1253,7 +1321,7 @@ export const Tab4QuestionAuthoring: React.FC<Tab4QuestionAuthoringProps> = ({
               )}
               {questionType === 'short_answer' && (
                 <div className="font-bold text-sm text-indigo-700 bg-indigo-50 p-2.5 rounded-xl border border-indigo-200 font-mono">
-                  {shortAnswer}
+                  <MathRenderer content={shortAnswer} inline />
                 </div>
               )}
               {questionType === 'numeric_answer' && (
@@ -1283,6 +1351,29 @@ export const Tab4QuestionAuthoring: React.FC<Tab4QuestionAuthoringProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Interactive Geometry Drawer Modal */}
+      {showGeometryDrawer && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <InteractiveGeometryDrawer
+              initialData={customGeometryData}
+              onSave={(dataJson) => {
+                setCustomGeometryData(dataJson);
+                setDiagramType('geometry');
+                setShowGeometryDrawer(false);
+              }}
+              onClose={() => setShowGeometryDrawer(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Automated Math Test Suite Modal */}
+      <MathTestSuiteModal
+        isOpen={showMathTestSuite}
+        onClose={() => setShowMathTestSuite(false)}
+      />
     </div>
   );
 };

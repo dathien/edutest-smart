@@ -23,6 +23,7 @@ import { StorageService } from '../../services/storage';
 import { MathRenderer } from '../MathRenderer';
 import { GeometryDiagram } from '../GeometryDiagram';
 import { MathShowcaseModal } from './MathShowcaseModal';
+import { MathEditor } from '../math/MathEditor';
 import { playSound } from '../../services/sound';
 
 interface QuestionBankViewProps {
@@ -626,47 +627,52 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Nội dung câu hỏi (Hỗ trợ công thức LaTeX trong dấu $...$ hoặc $$...$$) *
                 </label>
-                <textarea
-                  required
+                <MathEditor
+                  multiline={true}
                   rows={3}
                   value={formPrompt}
-                  onChange={(e) => setFormPrompt(e.target.value)}
-                  placeholder="Ví dụ: Cho hàm số $y = f(x) = \\frac{2x - 1}{x + 1}$. Tìm phương trình đường tiệm cận ngang của đồ thị hàm số."
-                  className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg font-mono focus:ring-2 focus:ring-indigo-500"
+                  onChange={setFormPrompt}
+                  placeholder="Ví dụ: Cho hàm số $y = f(x) = \frac{2x - 1}{x + 1}$. Tìm phương trình đường tiệm cận ngang của đồ thị hàm số."
                 />
               </div>
 
               {/* Type specific forms */}
               {formType === 'multiple_choice' && (
-                <div className="space-y-2 bg-slate-50 p-3 rounded-xl border border-slate-200">
-                  <div className="text-xs font-bold text-slate-700 mb-2">4 Phương án trả lời:</div>
+                <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                  <div className="text-xs font-bold text-slate-700">4 Phương án trả lời & Chọn đáp án đúng:</div>
                   {mcOptions.map((opt, i) => {
                     const letter = ['A', 'B', 'C', 'D'][i] as 'A' | 'B' | 'C' | 'D';
+                    const isSelected = mcCorrect === letter;
                     return (
-                      <div key={i} className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setMcCorrect(letter)}
-                          className={`w-7 h-7 rounded-lg text-xs font-bold shrink-0 transition-colors ${
-                            mcCorrect === letter
-                              ? 'bg-emerald-600 text-white'
-                              : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
-                          }`}
-                          title="Bấm để chọn đáp án ĐÚNG"
-                        >
-                          {letter}
-                        </button>
-                        <input
-                          type="text"
-                          required
+                      <div key={i} className="p-3 bg-white rounded-xl border border-slate-200 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="qb_mc_correct"
+                              checked={isSelected}
+                              onChange={() => {
+                                setMcCorrect(letter);
+                                playSound('click');
+                              }}
+                              className="w-4 h-4 text-emerald-600 cursor-pointer"
+                            />
+                            <span className={`text-xs font-extrabold px-2 py-0.5 rounded ${
+                              isSelected ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-700'
+                            }`}>
+                              Phương án {letter}
+                            </span>
+                            {isSelected && <span className="text-xs font-bold text-emerald-700">★ Đáp án đúng</span>}
+                          </label>
+                        </div>
+                        <MathEditor
                           value={opt}
-                          onChange={(e) => {
+                          onChange={(newVal) => {
                             const copy = [...mcOptions];
-                            copy[i] = e.target.value;
+                            copy[i] = newVal;
                             setMcOptions(copy);
                           }}
-                          placeholder={`Nội dung phương án ${letter} (có thể dùng $...$)`}
-                          className="flex-1 text-xs px-3 py-1.5 border border-slate-300 rounded-lg bg-white"
+                          placeholder={`Nội dung phương án ${letter}`}
                         />
                       </div>
                     );
