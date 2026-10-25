@@ -77,7 +77,7 @@ export const DashboardSlideshow: React.FC<DashboardSlideshowProps> = ({ currentU
       badgeIcon: BookOpen,
       title: 'NGÂN HÀNG CÂU HỎI KHOA HỌC',
       description: 'Sắp xếp, tìm kiếm và sử dụng câu hỏi thuận tiện cho từng môn học.',
-      highlight: 'Hỗ trợ công thức Toán KaTeX, đồ thị hàm số và hình học không gian',
+      highlight: 'Hỗ trợ công thức Toán học chuẩn SGK, đồ thị hàm số và hình học không gian',
       pills: [
         { label: 'Phân loại Biết - Hiểu - Vận dụng', icon: CheckCircle2 },
         { label: 'Nhập tệp Word & Excel', icon: Layers },

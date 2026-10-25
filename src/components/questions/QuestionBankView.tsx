@@ -24,6 +24,8 @@ import { MathRenderer } from '../MathRenderer';
 import { GeometryDiagram } from '../GeometryDiagram';
 import { MathShowcaseModal } from './MathShowcaseModal';
 import { MathEditor } from '../math/MathEditor';
+import { CompactOptionsEditor } from '../math/CompactOptionsEditor';
+import { RichQuestionPromptEditor } from '../math/RichQuestionPromptEditor';
 import { playSound } from '../../services/sound';
 
 interface QuestionBankViewProps {
@@ -622,14 +624,9 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
                 </div>
               </div>
 
-              {/* Prompt with LaTeX support */}
+              {/* Prompt */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Nội dung câu hỏi (Hỗ trợ công thức LaTeX trong dấu $...$ hoặc $$...$$) *
-                </label>
-                <MathEditor
-                  multiline={true}
-                  rows={3}
+                <RichQuestionPromptEditor
                   value={formPrompt}
                   onChange={setFormPrompt}
                   placeholder="Ví dụ: Cho hàm số $y = f(x) = \frac{2x - 1}{x + 1}$. Tìm phương trình đường tiệm cận ngang của đồ thị hàm số."
@@ -638,45 +635,13 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
 
               {/* Type specific forms */}
               {formType === 'multiple_choice' && (
-                <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
-                  <div className="text-xs font-bold text-slate-700">4 Phương án trả lời & Chọn đáp án đúng:</div>
-                  {mcOptions.map((opt, i) => {
-                    const letter = ['A', 'B', 'C', 'D'][i] as 'A' | 'B' | 'C' | 'D';
-                    const isSelected = mcCorrect === letter;
-                    return (
-                      <div key={i} className="p-3 bg-white rounded-xl border border-slate-200 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <label className="flex items-center gap-2 cursor-pointer">
-                            <input
-                              type="radio"
-                              name="qb_mc_correct"
-                              checked={isSelected}
-                              onChange={() => {
-                                setMcCorrect(letter);
-                                playSound('click');
-                              }}
-                              className="w-4 h-4 text-emerald-600 cursor-pointer"
-                            />
-                            <span className={`text-xs font-extrabold px-2 py-0.5 rounded ${
-                              isSelected ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-700'
-                            }`}>
-                              Phương án {letter}
-                            </span>
-                            {isSelected && <span className="text-xs font-bold text-emerald-700">★ Đáp án đúng</span>}
-                          </label>
-                        </div>
-                        <MathEditor
-                          value={opt}
-                          onChange={(newVal) => {
-                            const copy = [...mcOptions];
-                            copy[i] = newVal;
-                            setMcOptions(copy);
-                          }}
-                          placeholder={`Nội dung phương án ${letter}`}
-                        />
-                      </div>
-                    );
-                  })}
+                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                  <CompactOptionsEditor
+                    options={mcOptions}
+                    onChange={setMcOptions}
+                    correctAnswer={mcCorrect}
+                    onCorrectAnswerChange={(ans) => setMcCorrect(ans as 'A' | 'B' | 'C' | 'D')}
+                  />
                 </div>
               )}
 

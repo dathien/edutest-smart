@@ -246,7 +246,7 @@ export const MathTestSuiteModal: React.FC<MathTestSuiteModalProps> = ({
             </span>
           </div>
           <span className="text-[11px] text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full font-semibold border border-indigo-200">
-            KaTeX 0.19.1 + Vector SVG + GDPT 2018
+            Đồ thị & Hình học Vector SGK GDPT 2018
           </span>
         </div>
 

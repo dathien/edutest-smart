@@ -41,6 +41,9 @@ import { VariationTableRenderer } from '../VariationTableRenderer';
 import { FunctionGraphRenderer } from '../FunctionGraphRenderer';
 import { SignTableRenderer } from '../SignTableRenderer';
 import { MathEditor } from '../math/MathEditor';
+import { CompactOptionsEditor } from '../math/CompactOptionsEditor';
+import { RichQuestionPromptEditor } from '../math/RichQuestionPromptEditor';
+import { VisualFormulaModal } from '../math/VisualFormulaModal';
 import { InteractiveGeometryDrawer } from '../geometry/InteractiveGeometryDrawer';
 import { MathTestSuiteModal } from '../math/MathTestSuiteModal';
 
@@ -187,7 +190,26 @@ export const Tab4QuestionAuthoring: React.FC<Tab4QuestionAuthoringProps> = ({
   // Modal States
   const [showGeometryDrawer, setShowGeometryDrawer] = useState(false);
   const [showMathTestSuite, setShowMathTestSuite] = useState(false);
+  const [showVisualFormulaModal, setShowVisualFormulaModal] = useState(false);
+  const [formulaModalTarget, setFormulaModalTarget] = useState<
+    { type: 'prompt' } | { type: 'option'; index: number } | { type: 'solution' }
+  >({ type: 'prompt' });
   const [customGeometryData, setCustomGeometryData] = useState<string>('');
+
+  // Formula Modal Insert Handler
+  const handleInsertFormulaFromModal = (formulaText: string) => {
+    playSound('click');
+    if (formulaModalTarget.type === 'prompt') {
+      setPrompt(prev => prev ? `${prev} ${formulaText}` : formulaText);
+    } else if (formulaModalTarget.type === 'option') {
+      const idx = formulaModalTarget.index;
+      const copy = [...mcOptions];
+      copy[idx] = copy[idx] ? `${copy[idx]} ${formulaText}` : formulaText;
+      setMcOptions(copy);
+    } else if (formulaModalTarget.type === 'solution') {
+      setSolution(prev => prev ? `${prev} ${formulaText}` : formulaText);
+    }
+  };
 
   // Quick Math Insert Helper
   const handleInsertSymbol = (latex: string) => {
@@ -376,7 +398,7 @@ export const Tab4QuestionAuthoring: React.FC<Tab4QuestionAuthoringProps> = ({
             Trình biên soạn câu hỏi & Công cụ Toán học
           </h2>
           <p className="text-sm text-slate-500 mt-0.5">
-            Hỗ trợ KaTeX, Bảng biến thiên tùy chỉnh, Bảng xét dấu, Đồ thị SVG, Hình học không gian và 11 định dạng kiểm tra
+            Soạn thảo câu hỏi trực quan, công thức Toán học chuẩn SGK, Bảng biến thiên, Đồ thị và Hình học không gian
           </p>
         </div>
 
@@ -384,10 +406,22 @@ export const Tab4QuestionAuthoring: React.FC<Tab4QuestionAuthoringProps> = ({
           <button
             type="button"
             onClick={() => {
-              setShowGeometryDrawer(true);
+              setFormulaModalTarget({ type: 'prompt' });
+              setShowVisualFormulaModal(true);
               playSound('click');
             }}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-xl border border-indigo-200 transition-colors cursor-pointer"
+          >
+            <Sparkles className="w-4 h-4 text-indigo-600" />
+            Chèn công thức Toán học
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setShowGeometryDrawer(true);
+              playSound('click');
+            }}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 rounded-xl border border-slate-200 transition-colors cursor-pointer"
           >
             <Layers className="w-4 h-4 text-indigo-600" />
             Vẽ hình học SVG
@@ -529,7 +563,7 @@ export const Tab4QuestionAuthoring: React.FC<Tab4QuestionAuthoringProps> = ({
           {/* Math Quick Toolbar */}
           <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 shadow-2xs">
             <div className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 flex items-center justify-between">
-              <span>Thanh công cụ ký hiệu Toán học (KaTeX)</span>
+              <span>Thanh công cụ chèn ký hiệu Toán học</span>
               <span className="text-[11px] font-normal text-slate-500">Bấm để chèn nhanh</span>
             </div>
             <div className="flex flex-wrap gap-1.5">
@@ -542,7 +576,7 @@ export const Tab4QuestionAuthoring: React.FC<Tab4QuestionAuthoringProps> = ({
                 { label: 'Giới hạn', latex: '$\\lim_{x \\to 0}$' },
                 { label: 'Vectơ', latex: '$\\vec{u}$' },
                 { label: 'Vô cực', latex: '$\\infty$' },
-                { label: 'Tập số', latex: '$\\mathbb{R}$' },
+                { label: 'Tập số R', latex: '$\\mathbb{R}$' },
                 { label: 'Thuộc', latex: '$\\in$' },
                 { label: 'Khoảng', latex: '$(-\\infty; 0)$' },
                 { label: 'Đoạn', latex: '$[a; b]$' },
@@ -561,19 +595,15 @@ export const Tab4QuestionAuthoring: React.FC<Tab4QuestionAuthoringProps> = ({
           </div>
 
           {/* Question Prompt Editor */}
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-                3. Nội dung câu hỏi (LaTeX: $...$ và $$...$$)
-              </label>
-              <span className="text-xs text-slate-400 font-mono">KaTeX Render Ready</span>
-            </div>
-            <MathEditor
-              multiline={true}
-              rows={4}
+          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs">
+            <RichQuestionPromptEditor
               value={prompt}
               onChange={setPrompt}
-              placeholder="Nhập nội dung đề bài, ví dụ: Cho hàm số $y = f(x)$ liên tục trên $\mathbb{R}$..."
+              placeholder="Nhập nội dung đề bài, ví dụ: Cho hàm số $y = f(x)$ liên tục trên $\mathbb{R}$ có bảng biến thiên như hình vẽ..."
+              onOpenVisualFormulaModal={() => {
+                setFormulaModalTarget({ type: 'prompt' });
+                setShowVisualFormulaModal(true);
+              }}
             />
           </div>
 
@@ -718,73 +748,17 @@ export const Tab4QuestionAuthoring: React.FC<Tab4QuestionAuthoringProps> = ({
           {/* Format-specific interactive editors */}
           {/* 1. Multiple Choice */}
           {questionType === 'multiple_choice' && (
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-                    5. THIẾT LẬP 4 PHƯƠNG ÁN LỰA CHỌN & CHỌN ĐÁP ÁN ĐÚNG
-                  </label>
-                  <p className="text-[11px] text-slate-400 mt-0.5">
-                    Hỗ trợ KaTeX rendered trực tiếp. Bấm vào công thức trong bản xem trước để sửa nhanh.
-                  </p>
-                </div>
-                <span className="text-xs text-indigo-700 font-semibold bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-200">
-                  Đáp án đang chọn: <strong>Phương án {correctAnswer}</strong>
-                </span>
-              </div>
-
-              <div className="space-y-3.5">
-                {(['A', 'B', 'C', 'D'] as const).map((letter, idx) => {
-                  const isSelected = correctAnswer === letter;
-                  return (
-                    <div
-                      key={letter}
-                      className={`p-3.5 rounded-xl border transition-all ${
-                        isSelected
-                          ? 'bg-indigo-50/50 border-indigo-300 ring-2 ring-indigo-100'
-                          : 'bg-slate-50/70 border-slate-200'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="radio"
-                            name="correct_answer"
-                            checked={isSelected}
-                            onChange={() => {
-                              setCorrectAnswer(letter);
-                              playSound('click');
-                            }}
-                            className="w-4 h-4 text-indigo-600 cursor-pointer"
-                          />
-                          <span
-                            className={`font-extrabold text-xs px-2.5 py-1 rounded-lg border transition-colors ${
-                              isSelected
-                                ? 'bg-indigo-600 text-white border-indigo-700'
-                                : 'bg-white text-slate-700 border-slate-300'
-                            }`}
-                          >
-                            Phương án {letter}
-                          </span>
-                          {isSelected && (
-                            <span className="text-xs font-bold text-indigo-700">★ Đáp án đúng</span>
-                          )}
-                        </label>
-                      </div>
-
-                      <MathEditor
-                        value={mcOptions[idx]}
-                        onChange={(newVal) => {
-                          const copy = [...mcOptions];
-                          copy[idx] = newVal;
-                          setMcOptions(copy);
-                        }}
-                        placeholder={`Nhập phương án ${letter}, ví dụ: Hàm số đồng biến trên $(-\\infty; -1)$`}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs">
+              <CompactOptionsEditor
+                options={mcOptions}
+                onChange={setMcOptions}
+                correctAnswer={correctAnswer}
+                onCorrectAnswerChange={setCorrectAnswer}
+                onOpenVisualFormulaModal={(targetIdx) => {
+                  setFormulaModalTarget({ type: 'option', index: targetIdx });
+                  setShowVisualFormulaModal(true);
+                }}
+              />
             </div>
           )}
 
@@ -1295,11 +1269,44 @@ export const Tab4QuestionAuthoring: React.FC<Tab4QuestionAuthoringProps> = ({
             {/* Answer Display Preview */}
             <div className="pt-2 border-t border-slate-100">
               <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                Đáp án cấu hình:
+                Đáp án & Phương án lựa chọn:
               </div>
               {questionType === 'multiple_choice' && (
-                <div className="font-bold text-sm text-emerald-700 bg-emerald-50 p-2.5 rounded-xl border border-emerald-200">
-                  Đáp án đúng: Phương án {correctAnswer}
+                <div className="space-y-2">
+                  <div className="space-y-1.5 text-xs text-slate-800">
+                    {mcOptions.map((opt, i) => {
+                      const letter = ['A', 'B', 'C', 'D'][i];
+                      const isCorrect = correctAnswer === letter;
+                      return (
+                        <div
+                          key={letter}
+                          className={`p-2.5 rounded-xl border flex items-start gap-2.5 transition-all ${
+                            isCorrect
+                              ? 'bg-emerald-50 border-emerald-300 font-semibold text-emerald-950 shadow-2xs'
+                              : 'bg-slate-50 border-slate-200'
+                          }`}
+                        >
+                          <span
+                            className={`w-6 h-6 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${
+                              isCorrect
+                                ? 'bg-emerald-600 text-white'
+                                : 'bg-white border border-slate-300 text-slate-700'
+                            }`}
+                          >
+                            {letter}
+                          </span>
+                          <div className="flex-1 overflow-x-auto text-[15px] pt-0.5">
+                            <MathRenderer content={opt} />
+                          </div>
+                          {isCorrect && (
+                            <span className="text-[10px] text-emerald-700 font-bold uppercase shrink-0 pt-1">
+                              ★ Đúng
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
               {questionType === 'true_false_single' && (
@@ -1373,6 +1380,20 @@ export const Tab4QuestionAuthoring: React.FC<Tab4QuestionAuthoringProps> = ({
       <MathTestSuiteModal
         isOpen={showMathTestSuite}
         onClose={() => setShowMathTestSuite(false)}
+      />
+
+      {/* Visual Formula Builder Modal */}
+      <VisualFormulaModal
+        isOpen={showVisualFormulaModal}
+        onClose={() => setShowVisualFormulaModal(false)}
+        onInsert={handleInsertFormulaFromModal}
+        targetLabel={
+          formulaModalTarget.type === 'prompt'
+            ? 'Nội dung câu hỏi'
+            : formulaModalTarget.type === 'solution'
+            ? 'Lời giải chi tiết'
+            : `Phương án ${['A', 'B', 'C', 'D'][formulaModalTarget.index]}`
+        }
       />
     </div>
   );

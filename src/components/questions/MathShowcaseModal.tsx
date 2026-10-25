@@ -71,7 +71,7 @@ export const MathShowcaseModal: React.FC<MathShowcaseModalProps> = ({ isOpen, on
                 Kiểm Thử & Hiển Thị Toán Học Chuẩn SGK GDPT 2018
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Đối chiếu 9 bộ quy chuẩn: Công thức KaTeX, Bảng biến thiên SVG, Đồ thị giải tích và Hình học không gian.
+                Đối chiếu 9 bộ quy chuẩn: Công thức Toán học chuẩn SGK, Bảng biến thiên, Đồ thị giải tích và Hình học không gian.
               </p>
             </div>
           </div>
@@ -121,10 +121,10 @@ export const MathShowcaseModal: React.FC<MathShowcaseModalProps> = ({ isOpen, on
             <div className="space-y-4">
               <div className="bg-indigo-50/70 p-3.5 rounded-2xl border border-indigo-100 text-xs text-indigo-900 flex items-center justify-between">
                 <span className="font-semibold">
-                  Tất cả công thức bên dưới được xử lý trực tiếp bởi MathRenderer mà không để lộ mã thô hoặc ký tự $.
+                  Tất cả công thức bên dưới được hiển thị trực quan theo chuẩn ký hiệu SGK Toán THPT.
                 </span>
                 <span className="font-bold bg-white text-indigo-700 px-2 py-0.5 rounded border border-indigo-200">
-                  Font KaTeX SGK
+                  Chuẩn Toán THPT
                 </span>
               </div>
 

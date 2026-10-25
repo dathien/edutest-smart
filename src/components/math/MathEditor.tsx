@@ -116,7 +116,7 @@ export const MathEditor: React.FC<MathEditorProps> = ({
           <div className="flex items-center gap-1">
             {prefix}
             <span className="text-[11px] font-semibold text-slate-500 hidden sm:inline">
-              Trình soạn thảo Toán học
+              Soạn thảo
             </span>
           </div>
 
@@ -242,7 +242,7 @@ export const MathEditor: React.FC<MathEditorProps> = ({
             >
               <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1 border-b border-slate-200/60 pb-1">
                 <span className="font-semibold text-indigo-700 flex items-center gap-1">
-                  <Eye className="w-3 h-3" /> Công thức đã dựng (KaTeX)
+                  <Eye className="w-3 h-3" /> Hiển thị trực quan
                 </span>
                 {mode === 'preview' && (
                   <span className="text-slate-500 font-medium flex items-center gap-1">
