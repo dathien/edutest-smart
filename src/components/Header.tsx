@@ -45,6 +45,14 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onSelectUser, avail
     }
   };
 
+  const getDisplayName = (u: User) => {
+    const name = u.fullName.trim();
+    if (u.salutation && !name.startsWith(u.salutation)) {
+      return `${u.salutation} ${name}`;
+    }
+    return name;
+  };
+
   const roleInfo = getRoleBadge(currentUser.role);
   const RoleIcon = roleInfo.icon;
 
@@ -156,7 +164,7 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onSelectUser, avail
               </div>
               <div className="hidden sm:block">
                 <div className="text-xs font-bold text-slate-800 leading-tight">
-                  {currentUser.fullName}
+                  {getDisplayName(currentUser)}
                 </div>
                 <div className="flex items-center gap-1 mt-0.5">
                   <RoleIcon className="w-3 h-3 text-indigo-600" />
@@ -171,7 +179,7 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onSelectUser, avail
               <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-lg border border-slate-200 py-2 z-50">
                 <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/60 rounded-t-xl">
                   <p className="text-xs text-slate-500">Đang đăng nhập với</p>
-                  <p className="text-sm font-bold text-slate-900 mt-0.5">{currentUser.fullName}</p>
+                  <p className="text-sm font-bold text-slate-900 mt-0.5">{getDisplayName(currentUser)}</p>
                   <p className="text-xs text-slate-500 font-mono">{currentUser.email}</p>
                   <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium bg-indigo-100 text-indigo-800">
                     <RoleIcon className="w-3 h-3" />
@@ -198,7 +206,7 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onSelectUser, avail
                       }`}
                     >
                       <div className="text-left">
-                        <p>{u.fullName}</p>
+                        <p className="font-semibold text-slate-800">{getDisplayName(u)}</p>
                         <p className="text-[10px] text-slate-400 font-normal">
                           {u.role === 'admin' ? 'Quản trị viên' : u.role === 'teacher' ? 'Giáo viên Toán' : 'Học sinh'}
                         </p>

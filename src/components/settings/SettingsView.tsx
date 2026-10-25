@@ -18,8 +18,16 @@ import {
   FileSpreadsheet,
   Server,
   Layers,
+  Plus,
+  Edit2,
+  Trash2,
+  Eye,
+  X,
+  School,
+  User as UserIcon,
+  BookOpen,
 } from 'lucide-react';
-import { User, AuditLog } from '../../types';
+import { User, AuditLog, Role } from '../../types';
 import { StorageService } from '../../services/storage';
 import { playSound } from '../../services/sound';
 
@@ -36,33 +44,217 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   logs,
   onRefreshData,
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'profile' | 'teachers' | 'gas_integration' | 'backup' | 'audit'>('teachers');
-  const [gasUrl, setGasUrl] = useState('');
-  const [sheetId, setSheetId] = useState('');
+  const [activeSubTab, setActiveSubTab] = useState<'teachers' | 'profile' | 'gas_integration' | 'backup' | 'audit'>('teachers');
   const [copiedCode, setCopiedCode] = useState(false);
-  const [importStatus, setImportStatus] = useState<string | null>(null);
+  const [actionMessage, setActionMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  // Filter pending teacher registrations (Section 4.1 & 4.4)
-  const pendingTeachers = users.filter(u => u.status === 'pending');
-  const activeUsers = users.filter(u => u.status !== 'pending');
+  // Modals
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [editingTeacher, setEditingTeacher] = useState<User | null>(null);
+  const [viewingTeacher, setViewingTeacher] = useState<User | null>(null);
+  const [deletingTeacher, setDeletingTeacher] = useState<User | null>(null);
 
+  // Form states for Add Teacher
+  const [addFullName, setAddFullName] = useState('');
+  const [addSalutation, setAddSalutation] = useState<'Thầy' | 'Cô' | 'Thầy giáo' | 'Cô giáo'>('Thầy');
+  const [addUsername, setAddUsername] = useState('');
+  const [addEmail, setAddEmail] = useState('');
+  const [addSchool, setAddSchool] = useState('THPT Chuyên & GDPT 2018');
+  const [addRole, setAddRole] = useState<Role>('teacher');
+  const [addStatus, setAddStatus] = useState<'active' | 'pending' | 'locked'>('active');
+  const [addSubjects, setAddSubjects] = useState<string[]>(['TOAN_12']);
+  const [addPhone, setAddPhone] = useState('');
+  const [addError, setAddError] = useState('');
+
+  // Form states for Edit Teacher
+  const [editFullName, setEditFullName] = useState('');
+  const [editSalutation, setEditSalutation] = useState<string>('Thầy');
+  const [editEmail, setEditEmail] = useState('');
+  const [editSchool, setEditSchool] = useState('');
+  const [editRole, setEditRole] = useState<Role>('teacher');
+  const [editStatus, setEditStatus] = useState<'active' | 'pending' | 'locked'>('active');
+  const [editSubjects, setEditSubjects] = useState<string[]>([]);
+  const [editPhone, setEditPhone] = useState('');
+  const [editError, setEditError] = useState('');
+
+  // Personal Profile form state (for logged-in teacher / admin)
+  const [selfFullName, setSelfFullName] = useState(currentUser.fullName);
+  const [selfSalutation, setSelfSalutation] = useState(currentUser.salutation || 'Thầy');
+  const [selfEmail, setSelfEmail] = useState(currentUser.email);
+  const [selfSchool, setSelfSchool] = useState(currentUser.schoolName);
+  const [selfPhone, setSelfPhone] = useState(currentUser.phone || '');
+  const [newPassword, setNewPassword] = useState('');
+  const [selfSuccess, setSelfSuccess] = useState('');
+
+  const isAdmin = currentUser.role === 'admin';
+  const pendingTeachers = users.filter((u) => u.status === 'pending');
+  const activeTeachers = users.filter((u) => u.status !== 'pending');
+
+  // Show transient notification message
+  const showNotification = (type: 'success' | 'error', text: string) => {
+    setActionMessage({ type, text });
+    setTimeout(() => setActionMessage(null), 4000);
+  };
+
+  // 1. Handle Add Teacher
+  const handleAddTeacher = (e: React.FormEvent) => {
+    e.preventDefault();
+    setAddError('');
+
+    if (!addFullName.trim() || !addUsername.trim() || !addEmail.trim()) {
+      setAddError('Vui lòng điền đầy đủ các thông tin bắt buộc (*).');
+      return;
+    }
+
+    const res = StorageService.createTeacher({
+      fullName: addFullName.trim(),
+      salutation: addSalutation,
+      username: addUsername.trim(),
+      email: addEmail.trim(),
+      schoolName: addSchool.trim(),
+      role: addRole,
+      status: addStatus,
+      teachingSubjects: addSubjects,
+      phone: addPhone.trim(),
+    });
+
+    if (!res.success) {
+      setAddError(res.message);
+      playSound('wrong');
+      return;
+    }
+
+    playSound('correct');
+    showNotification('success', res.message);
+    setShowAddModal(false);
+    // Reset form
+    setAddFullName('');
+    setAddUsername('');
+    setAddEmail('');
+    setAddPhone('');
+    onRefreshData();
+  };
+
+  // 2. Open Edit Modal
+  const openEditModal = (t: User) => {
+    setEditingTeacher(t);
+    setEditFullName(t.fullName);
+    setEditSalutation(t.salutation || 'Thầy');
+    setEditEmail(t.email);
+    setEditSchool(t.schoolName);
+    setEditRole(t.role);
+    setEditStatus(t.status);
+    setEditSubjects(t.teachingSubjects || ['TOAN_12']);
+    setEditPhone(t.phone || '');
+    setEditError('');
+    playSound('click');
+  };
+
+  // 3. Save Edit Teacher
+  const handleSaveEditTeacher = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTeacher) return;
+    setEditError('');
+
+    if (!editFullName.trim() || !editEmail.trim()) {
+      setEditError('Họ và tên và Email không được để trống.');
+      return;
+    }
+
+    // Check email conflict with other users
+    const duplicateEmail = users.find(
+      (u) => u.id !== editingTeacher.id && u.email.toLowerCase() === editEmail.trim().toLowerCase()
+    );
+    if (duplicateEmail) {
+      setEditError(`Email "${editEmail}" đang được sử dụng bởi tài khoản khác.`);
+      playSound('wrong');
+      return;
+    }
+
+    const updated: User = {
+      ...editingTeacher,
+      fullName: editFullName.trim(),
+      salutation: editSalutation.trim(),
+      email: editEmail.trim(),
+      schoolName: editSchool.trim(),
+      role: editRole,
+      status: editStatus,
+      teachingSubjects: editSubjects,
+      phone: editPhone.trim(),
+    };
+
+    StorageService.updateUser(updated);
+    playSound('correct');
+    showNotification('success', `Đã cập nhật thành công hồ sơ của ${updated.fullName}!`);
+    setEditingTeacher(null);
+    onRefreshData();
+  };
+
+  // 4. Handle Delete Teacher
+  const handleConfirmDelete = () => {
+    if (!deletingTeacher) return;
+
+    const res = StorageService.deleteTeacher(deletingTeacher.id);
+    if (!res.success) {
+      playSound('wrong');
+      showNotification('error', res.message);
+      setDeletingTeacher(null);
+      return;
+    }
+
+    playSound('correct');
+    showNotification('success', res.message);
+    setDeletingTeacher(null);
+    onRefreshData();
+  };
+
+  // 5. Handle Toggle Lock Status
+  const handleToggleLock = (userId: string) => {
+    const res = StorageService.toggleUserStatus(userId);
+    if (!res.success) {
+      playSound('wrong');
+      showNotification('error', res.message);
+    } else {
+      playSound('click');
+      showNotification('success', res.message);
+    }
+    onRefreshData();
+  };
+
+  // 6. Handle Approve Pending Teacher
   const handleApproveTeacher = (userId: string) => {
     StorageService.approveUser(userId);
     playSound('correct');
+    showNotification('success', 'Đã phê duyệt và kích hoạt tài khoản giáo viên.');
     onRefreshData();
   };
 
-  const handleToggleLock = (userId: string) => {
-    StorageService.toggleUserStatus(userId);
-    playSound('click');
+  // 7. Save Personal Profile
+  const handleSaveSelfProfile = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selfFullName.trim() || !selfEmail.trim()) return;
+
+    const updated: User = {
+      ...currentUser,
+      fullName: selfFullName.trim(),
+      salutation: selfSalutation.trim(),
+      email: selfEmail.trim(),
+      schoolName: selfSchool.trim(),
+      phone: selfPhone.trim(),
+    };
+
+    StorageService.updateUser(updated);
+    playSound('correct');
+    setSelfSuccess('Thông tin hồ sơ cá nhân đã được cập nhật thành công!');
+    setTimeout(() => setSelfSuccess(''), 3000);
     onRefreshData();
   };
 
-  // Google Apps Script Complete Backend Code Template (Section 2, 16, 19)
+  // Copy Google Apps Script code
   const googleAppsScriptCode = `/**
  * =========================================================================
  * EDUTEST SMART - GOOGLE APPS SCRIPT BACKEND API (GDPT 2018)
- * Tác giả: GV. Hồ Nguyễn Đa Thiện
+ * Tác giả: Thầy Hồ Nguyễn Đa Thiện
  * Cơ sở dữ liệu: Google Sheets (20 Bảng Quan Hệ)
  * =========================================================================
  */
@@ -109,7 +301,6 @@ function doPost(e) {
     }
 
     if (action === 'batchSync') {
-      // Đồng bộ nhiều bảng cùng lúc
       return jsonResponse({ status: 'success', syncedAt: new Date().toISOString() });
     }
 
@@ -146,7 +337,6 @@ function readSheetData(sheetName) {
     setTimeout(() => setCopiedCode(false), 2000);
   };
 
-  // Export full JSON backup
   const handleExportBackup = () => {
     const jsonStr = StorageService.exportFullBackupJSON();
     const blob = new Blob([jsonStr], { type: 'application/json' });
@@ -166,29 +356,47 @@ function readSheetData(sheetName) {
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-xl font-extrabold text-slate-800">Tài khoản & Cài đặt hệ thống</h2>
+            <h2 className="text-xl font-extrabold text-slate-800">Tài khoản & Quản trị Hệ thống</h2>
             <span className="text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-full">
-              Quản trị & Phân quyền
+              Phân quyền RBAC
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Duyệt đăng ký giáo viên, cơ sở dữ liệu Google Sheets / GAS API, sao lưu và nhật ký hoạt động.
+            Quản lý danh sách giáo viên, hồ sơ cá nhân, kết nối Google Sheets & Google Apps Script API.
           </p>
         </div>
 
-        {/* Sub tabs */}
-        <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl text-xs font-bold">
+        {/* Sub tabs Navigation */}
+        <div className="flex flex-wrap items-center gap-1.5 bg-slate-100 p-1 rounded-xl text-xs font-bold">
           <button
-            onClick={() => { setActiveSubTab('teachers'); playSound('click'); }}
+            onClick={() => {
+              setActiveSubTab('teachers');
+              playSound('click');
+            }}
             className={`px-3 py-1.5 rounded-lg transition-all ${
               activeSubTab === 'teachers' ? 'bg-white text-indigo-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Quản lý giáo viên {pendingTeachers.length > 0 && `(${pendingTeachers.length} chờ)`}
+            Quản lý giáo viên {pendingTeachers.length > 0 && `(${pendingTeachers.length} chờ duyệt)`}
           </button>
 
           <button
-            onClick={() => { setActiveSubTab('gas_integration'); playSound('click'); }}
+            onClick={() => {
+              setActiveSubTab('profile');
+              playSound('click');
+            }}
+            className={`px-3 py-1.5 rounded-lg transition-all ${
+              activeSubTab === 'profile' ? 'bg-white text-indigo-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            Hồ sơ cá nhân & Cách xưng hô
+          </button>
+
+          <button
+            onClick={() => {
+              setActiveSubTab('gas_integration');
+              playSound('click');
+            }}
             className={`px-3 py-1.5 rounded-lg transition-all ${
               activeSubTab === 'gas_integration' ? 'bg-white text-indigo-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
             }`}
@@ -197,7 +405,10 @@ function readSheetData(sheetName) {
           </button>
 
           <button
-            onClick={() => { setActiveSubTab('backup'); playSound('click'); }}
+            onClick={() => {
+              setActiveSubTab('backup');
+              playSound('click');
+            }}
             className={`px-3 py-1.5 rounded-lg transition-all ${
               activeSubTab === 'backup' ? 'bg-white text-indigo-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
             }`}
@@ -206,7 +417,10 @@ function readSheetData(sheetName) {
           </button>
 
           <button
-            onClick={() => { setActiveSubTab('audit'); playSound('click'); }}
+            onClick={() => {
+              setActiveSubTab('audit');
+              playSound('click');
+            }}
             className={`px-3 py-1.5 rounded-lg transition-all ${
               activeSubTab === 'audit' ? 'bg-white text-indigo-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
             }`}
@@ -216,106 +430,242 @@ function readSheetData(sheetName) {
         </div>
       </div>
 
-      {/* SUB-TAB 1: Quản lý & Phê duyệt Giáo viên (Section 4) */}
+      {/* Action Notification Alert */}
+      {actionMessage && (
+        <div
+          className={`p-3.5 rounded-xl border text-xs font-semibold flex items-center justify-between animate-in fade-in ${
+            actionMessage.type === 'success'
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+              : 'bg-rose-50 border-rose-200 text-rose-800'
+          }`}
+        >
+          <span>{actionMessage.text}</span>
+          <button onClick={() => setActionMessage(null)} className="opacity-70 hover:opacity-100">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* ========================================================
+          SUB-TAB 1: QUẢN LÝ GIÁO VIÊN (Yêu cầu 2)
+         ======================================================== */}
       {activeSubTab === 'teachers' && (
         <div className="space-y-6">
+          {/* Header Action Bar */}
+          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                <School className="w-5 h-5 text-indigo-600" />
+                QUẢN LÝ GIÁO VIÊN
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Danh sách đội ngũ giáo viên, phân quyền môn học và quản trị trạng thái tài khoản.
+              </p>
+            </div>
+
+            {isAdmin ? (
+              <button
+                onClick={() => {
+                  setAddFullName('');
+                  setAddUsername('');
+                  setAddEmail('');
+                  setAddPhone('');
+                  setAddError('');
+                  setShowAddModal(true);
+                  playSound('click');
+                }}
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all"
+              >
+                <Plus className="w-4 h-4" /> Thêm giáo viên mới
+              </button>
+            ) : (
+              <div className="text-xs text-slate-500 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
+                Chế độ xem giáo viên (Chỉ Quản trị viên có quyền thêm / chỉnh sửa / xóa)
+              </div>
+            )}
+          </div>
+
           {/* Pending Approval Section */}
           {pendingTeachers.length > 0 && (
-            <div className="bg-amber-50/70 border border-amber-200 rounded-2xl p-5 shadow-xs space-y-3">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5 text-amber-600" />
-                <h3 className="text-sm font-bold text-amber-900">
-                  Tài khoản Giáo viên đang chờ Quản trị viên phê duyệt ({pendingTeachers.length})
-                </h3>
+            <div className="bg-amber-50/80 border border-amber-200 rounded-2xl p-5 shadow-xs space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5 text-amber-600" />
+                  <h4 className="text-sm font-bold text-amber-900">
+                    Tài khoản Giáo viên chờ Quản trị viên duyệt ({pendingTeachers.length})
+                  </h4>
+                </div>
+                <span className="text-[11px] font-semibold text-amber-700 bg-white px-2 py-0.5 rounded border border-amber-200">
+                  Quy trình: Đăng ký → Chờ duyệt → Duyệt → Kích hoạt
+                </span>
               </div>
-              <p className="text-xs text-amber-800">
-                Quy trình chuẩn: Đăng ký → Chờ phê duyệt → Quản trị viên duyệt → Kích hoạt tài khoản → Đăng nhập.
-              </p>
 
-              <div className="divide-y divide-amber-200/60 pt-1">
+              <div className="divide-y divide-amber-200/70 pt-1">
                 {pendingTeachers.map((t) => (
-                  <div key={t.id} className="py-3 flex items-center justify-between">
+                  <div key={t.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
-                      <p className="text-xs font-bold text-slate-800">{t.fullName}</p>
-                      <p className="text-[11px] text-slate-500">
-                        {t.email} · {t.schoolName} · Môn: {t.teachingSubjects?.join(', ')}
+                      <p className="text-xs font-bold text-slate-800">
+                        {t.salutation || 'Thầy/Cô'} {t.fullName}
+                      </p>
+                      <p className="text-[11px] text-slate-600 mt-0.5">
+                        Tài khoản: <span className="font-mono font-semibold text-indigo-700">{t.username}</span> · {t.email} · {t.schoolName} · Môn: {t.teachingSubjects?.join(', ')}
                       </p>
                     </div>
 
-                    <button
-                      onClick={() => handleApproveTeacher(t.id)}
-                      className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-xs transition-colors flex items-center gap-1.5"
-                    >
-                      <Check className="w-4 h-4" /> Phê duyệt tài khoản
-                    </button>
+                    {isAdmin && (
+                      <button
+                        onClick={() => handleApproveTeacher(t.id)}
+                        className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-xs transition-colors flex items-center gap-1.5 self-start sm:self-center"
+                      >
+                        <Check className="w-4 h-4" /> Phê duyệt & Kích hoạt
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Active Users Table */}
+          {/* Teachers List Table */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
             <div className="p-4 border-b border-slate-200 bg-slate-50/50 flex items-center justify-between">
               <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                Danh sách Tài khoản đã kích hoạt ({activeUsers.length})
+                Danh sách Giáo viên trong hệ thống ({users.length})
               </h4>
-              <span className="text-xs text-slate-400">Phân quyền RBAC bảo mật</span>
+              <span className="text-xs text-slate-400">Tự động đồng bộ tên mới trên mọi phân hệ</span>
             </div>
 
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
-                    <th className="py-2.5 px-4">Họ và tên</th>
-                    <th className="py-2.5 px-4">Tên đăng nhập</th>
-                    <th className="py-2.5 px-4">Email</th>
-                    <th className="py-2.5 px-4">Vai trò</th>
-                    <th className="py-2.5 px-4">Đơn vị / Trường</th>
-                    <th className="py-2.5 px-4 text-center">Trạng thái</th>
-                    <th className="py-2.5 px-4 text-right">Khóa / Mở</th>
+                    <th className="py-3 px-4">Cách xưng hô & Họ tên</th>
+                    <th className="py-3 px-4">Tên đăng nhập</th>
+                    <th className="py-3 px-4">Email</th>
+                    <th className="py-3 px-4">Môn giảng dạy</th>
+                    <th className="py-3 px-4">Đơn vị / Trường</th>
+                    <th className="py-3 px-4 text-center">Vai trò</th>
+                    <th className="py-3 px-4 text-center">Trạng thái</th>
+                    <th className="py-3 px-4 text-right">Thao tác</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {activeUsers.map((u) => (
-                    <tr key={u.id} className="hover:bg-slate-50">
-                      <td className="py-2.5 px-4 font-semibold text-slate-800">{u.fullName}</td>
-                      <td className="py-2.5 px-4 font-mono text-indigo-700">{u.username}</td>
-                      <td className="py-2.5 px-4 text-slate-500">{u.email}</td>
-                      <td className="py-2.5 px-4">
-                        <span className="font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
-                          {u.role === 'admin' ? 'Quản trị' : u.role === 'teacher' ? 'Giáo viên' : 'Học sinh'}
-                        </span>
-                      </td>
-                      <td className="py-2.5 px-4 text-slate-600">{u.schoolName}</td>
-                      <td className="py-2.5 px-4 text-center">
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            u.status === 'active'
-                              ? 'bg-emerald-50 text-emerald-700'
-                              : 'bg-rose-50 text-rose-700'
-                          }`}
-                        >
-                          {u.status === 'active' ? 'Hoạt động' : 'Đã khóa'}
-                        </span>
-                      </td>
-                      <td className="py-2.5 px-4 text-right">
-                        {u.role !== 'admin' && (
-                          <button
-                            onClick={() => handleToggleLock(u.id)}
-                            className={`p-1.5 rounded-lg text-xs font-semibold ${
-                              u.status === 'locked'
-                                ? 'text-emerald-600 hover:bg-emerald-50'
-                                : 'text-rose-600 hover:bg-rose-50'
+                  {users.map((u) => {
+                    const isSelf = u.id === currentUser.id;
+                    const canEdit = isAdmin || isSelf;
+                    return (
+                      <tr key={u.id} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-purple-500 to-indigo-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
+                              {u.fullName.split(' ').slice(-1)[0][0]}
+                            </div>
+                            <div>
+                              <span className="font-bold text-slate-900 block leading-tight">
+                                {u.fullName}
+                              </span>
+                              <span className="text-[10px] text-slate-400">
+                                Cách gọi: <strong className="text-slate-600">{u.salutation || 'Thầy'}</strong>
+                              </span>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 font-mono font-semibold text-indigo-700">{u.username}</td>
+                        <td className="py-3 px-4 text-slate-500">{u.email}</td>
+                        <td className="py-3 px-4 text-slate-700">
+                          {u.teachingSubjects && u.teachingSubjects.length > 0 ? (
+                            <span className="font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
+                              {u.teachingSubjects.join(', ')}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 italic">Tất cả môn</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-slate-600">{u.schoolName}</td>
+                        <td className="py-3 px-4 text-center">
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              u.role === 'admin'
+                                ? 'bg-purple-100 text-purple-800'
+                                : u.role === 'teacher'
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'bg-emerald-100 text-emerald-800'
                             }`}
-                            title={u.status === 'locked' ? 'Mở khóa tài khoản' : 'Khóa tài khoản'}
                           >
-                            {u.status === 'locked' ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                            {u.role === 'admin' ? 'Quản trị viên' : u.role === 'teacher' ? 'Giáo viên' : 'Học sinh'}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              u.status === 'active'
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : u.status === 'pending'
+                                ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                : 'bg-rose-50 text-rose-700 border border-rose-200'
+                            }`}
+                          >
+                            {u.status === 'active' ? 'Hoạt động' : u.status === 'pending' ? 'Chờ duyệt' : 'Đã khóa'}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            {/* View Profile */}
+                            <button
+                              onClick={() => {
+                                setViewingTeacher(u);
+                                playSound('click');
+                              }}
+                              className="p-1.5 text-slate-400 hover:text-indigo-600 rounded-lg hover:bg-slate-100 transition-colors"
+                              title="Xem hồ sơ chi tiết"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+
+                            {/* Edit Teacher (Admin or Self) */}
+                            {canEdit && (
+                              <button
+                                onClick={() => openEditModal(u)}
+                                className="p-1.5 text-slate-400 hover:text-indigo-600 rounded-lg hover:bg-slate-100 transition-colors"
+                                title="Chỉnh sửa thông tin"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                            )}
+
+                            {/* Lock/Unlock (Admin only) */}
+                            {isAdmin && (
+                              <button
+                                onClick={() => handleToggleLock(u.id)}
+                                className={`p-1.5 rounded-lg transition-colors ${
+                                  u.status === 'locked'
+                                    ? 'text-emerald-600 hover:bg-emerald-50'
+                                    : 'text-amber-600 hover:bg-amber-50'
+                                }`}
+                                title={u.status === 'locked' ? 'Mở khóa tài khoản' : 'Khóa tài khoản'}
+                              >
+                                {u.status === 'locked' ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                              </button>
+                            )}
+
+                            {/* Delete Teacher (Admin only) */}
+                            {isAdmin && u.id !== currentUser.id && (
+                              <button
+                                onClick={() => {
+                                  setDeletingTeacher(u);
+                                  playSound('click');
+                                }}
+                                className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors"
+                                title="Xóa tài khoản"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -323,7 +673,114 @@ function readSheetData(sheetName) {
         </div>
       )}
 
-      {/* SUB-TAB 2: Google Sheets & GAS API (Section 2, 16, 19) */}
+      {/* ========================================================
+          SUB-TAB 2: HỒ SƠ CÁ NHÂN & CÁCH XƯNG HÔ (Yêu cầu 1)
+         ======================================================== */}
+      {activeSubTab === 'profile' && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs max-w-2xl space-y-6">
+          <div className="pb-4 border-b border-slate-100">
+            <h3 className="text-base font-bold text-slate-900">Hồ sơ cá nhân & Cách xưng hô</h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Tùy chỉnh họ tên và cách xưng hô hiển thị trên Header, Dashboard và các báo cáo học tập.
+            </p>
+          </div>
+
+          {selfSuccess && (
+            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-semibold text-emerald-800 flex items-center gap-2">
+              <Check className="w-4 h-4 text-emerald-600" />
+              <span>{selfSuccess}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSaveSelfProfile} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Cách xưng hô *</label>
+                <select
+                  value={selfSalutation}
+                  onChange={(e) => setSelfSalutation(e.target.value)}
+                  className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white font-medium"
+                >
+                  <option value="Thầy">Thầy</option>
+                  <option value="Cô">Cô</option>
+                  <option value="Thầy giáo">Thầy giáo</option>
+                  <option value="Cô giáo">Cô giáo</option>
+                </select>
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Họ và tên hiển thị *</label>
+                <input
+                  type="text"
+                  required
+                  value={selfFullName}
+                  onChange={(e) => setSelfFullName(e.target.value)}
+                  placeholder="Ví dụ: Thầy Hồ Nguyễn Đa Thiện"
+                  className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 font-medium"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Email *</label>
+                <input
+                  type="email"
+                  required
+                  value={selfEmail}
+                  onChange={(e) => setSelfEmail(e.target.value)}
+                  className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Số điện thoại</label>
+                <input
+                  type="text"
+                  value={selfPhone}
+                  onChange={(e) => setSelfPhone(e.target.value)}
+                  placeholder="0908xxxxxx"
+                  className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Trường học / Đơn vị</label>
+              <input
+                type="text"
+                value={selfSchool}
+                onChange={(e) => setSelfSchool(e.target.value)}
+                className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Đổi mật khẩu mới (tùy chọn)</label>
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Để trống nếu không đổi mật khẩu"
+                className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+
+            <div className="pt-3 border-t border-slate-100 flex justify-end">
+              <button
+                type="submit"
+                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
+              >
+                <Check className="w-4 h-4" /> Lưu thay đổi hồ sơ
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* ========================================================
+          SUB-TAB 3: GOOGLE SHEETS & GAS API
+         ======================================================== */}
       {activeSubTab === 'gas_integration' && (
         <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-6">
           <div className="pb-4 border-b border-slate-100 flex items-start justify-between">
@@ -333,7 +790,7 @@ function readSheetData(sheetName) {
                 Cơ Sở Dữ Liệu Google Sheets & Google Apps Script API
               </h3>
               <p className="text-xs text-slate-500 mt-1">
-                Theo thiết kế kiến trúc mục 2 và 16: Không yêu cầu người dùng cuối nhập API key, không đưa bí mật vào JavaScript client.
+                Kết nối cơ sở dữ liệu đồng bộ đám mây an toàn, bảo mật thông tin giáo viên và học sinh.
               </p>
             </div>
             <span className="text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg">
@@ -382,20 +839,12 @@ function readSheetData(sheetName) {
               {googleAppsScriptCode}
             </pre>
           </div>
-
-          {/* Steps to deploy */}
-          <div className="p-4 bg-indigo-50/50 rounded-xl border border-indigo-100 text-xs space-y-2 text-slate-700">
-            <span className="font-bold text-indigo-900">Hướng dẫn triển khai 3 bước:</span>
-            <ol className="list-decimal list-inside space-y-1">
-              <li>Mở Google Sheets của trường học → Chọn <strong>Tiện ích mở rộng (Extensions)</strong> → <strong>Apps Script</strong>.</li>
-              <li>Dán mã nguồn trên vào tệp <code>Code.gs</code>.</li>
-              <li>Bấm <strong>Triển khai (Deploy)</strong> → Chọn <strong>Tùy chọn triển khai mới (New deployment)</strong> → Chọn loại <em>Ứng dụng web (Web app)</em> → Quyền truy cập: <em>Bất kỳ ai (Anyone)</em>.</li>
-            </ol>
-          </div>
         </div>
       )}
 
-      {/* SUB-TAB 3: Sao lưu dữ liệu (Backup & Export) */}
+      {/* ========================================================
+          SUB-TAB 4: SAO LƯU DỮ LIỆU
+         ======================================================== */}
       {activeSubTab === 'backup' && (
         <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-6">
           <div className="pb-3 border-b border-slate-100">
@@ -441,7 +890,9 @@ function readSheetData(sheetName) {
         </div>
       )}
 
-      {/* SUB-TAB 4: Audit Logs (Section 16 Table AUDIT_LOG) */}
+      {/* ========================================================
+          SUB-TAB 5: NHẬT KÝ HỆ THỐNG
+         ======================================================== */}
       {activeSubTab === 'audit' && (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
           <div className="p-4 border-b border-slate-200 bg-slate-50/50 flex items-center justify-between">
@@ -476,6 +927,452 @@ function readSheetData(sheetName) {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          MODAL 1: THÊM GIÁO VIÊN MỚI (Yêu cầu 2)
+         ======================================================== */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-200 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+              <div className="flex items-center gap-2">
+                <Plus className="w-5 h-5 text-indigo-600" />
+                <h3 className="text-base font-bold text-slate-900">Thêm Giáo Viên Mới</h3>
+              </div>
+              <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {addError && (
+              <div className="mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>{addError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleAddTeacher} className="space-y-4">
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Cách xưng hô *</label>
+                  <select
+                    value={addSalutation}
+                    onChange={(e) => setAddSalutation(e.target.value as any)}
+                    className="w-full text-xs px-2.5 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white"
+                  >
+                    <option value="Thầy">Thầy</option>
+                    <option value="Cô">Cô</option>
+                    <option value="Thầy giáo">Thầy giáo</option>
+                    <option value="Cô giáo">Cô giáo</option>
+                  </select>
+                </div>
+
+                <div className="col-span-2">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Họ và tên giáo viên *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ví dụ: Trần Văn Bình"
+                    value={addFullName}
+                    onChange={(e) => setAddFullName(e.target.value)}
+                    className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Tên đăng nhập (username) *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="binh.tran"
+                    value={addUsername}
+                    onChange={(e) => setAddUsername(e.target.value)}
+                    className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Email liên hệ *</label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="binh.tran@edutest.edu.vn"
+                    value={addEmail}
+                    onChange={(e) => setAddEmail(e.target.value)}
+                    className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Trường học / Đơn vị *</label>
+                  <input
+                    type="text"
+                    required
+                    value={addSchool}
+                    onChange={(e) => setAddSchool(e.target.value)}
+                    className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Số điện thoại</label>
+                  <input
+                    type="text"
+                    placeholder="0912xxxxxx"
+                    value={addPhone}
+                    onChange={(e) => setAddPhone(e.target.value)}
+                    className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Vai trò hệ thống</label>
+                  <select
+                    value={addRole}
+                    onChange={(e) => setAddRole(e.target.value as Role)}
+                    className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg bg-white"
+                  >
+                    <option value="teacher">Giáo viên</option>
+                    <option value="admin">Quản trị viên</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Trạng thái tài khoản</label>
+                  <select
+                    value={addStatus}
+                    onChange={(e) => setAddStatus(e.target.value as any)}
+                    className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg bg-white"
+                  >
+                    <option value="active">Hoạt động ngay</option>
+                    <option value="pending">Chờ phê duyệt</option>
+                    <option value="locked">Tạm khóa</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Môn giảng dạy (Toán THPT GDPT 2018)</label>
+                <div className="flex gap-3 text-xs">
+                  {['TOAN_10', 'TOAN_11', 'TOAN_12'].map((subj) => (
+                    <label key={subj} className="flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={addSubjects.includes(subj)}
+                        onChange={(e) => {
+                          if (e.target.checked) setAddSubjects([...addSubjects, subj]);
+                          else setAddSubjects(addSubjects.filter((s) => s !== subj));
+                        }}
+                        className="rounded text-indigo-600"
+                      />
+                      <span>{subj === 'TOAN_10' ? 'Toán 10' : subj === 'TOAN_11' ? 'Toán 11' : 'Toán 12'}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-xs"
+                >
+                  Thêm giáo viên
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          MODAL 2: CHỈNH SỬA THÔNG TIN GIÁO VIÊN (Yêu cầu 2)
+         ======================================================== */}
+      {editingTeacher && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-200 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+              <div className="flex items-center gap-2">
+                <Edit2 className="w-5 h-5 text-indigo-600" />
+                <h3 className="text-base font-bold text-slate-900">
+                  Chỉnh Sửa Hồ Sơ: {editingTeacher.fullName}
+                </h3>
+              </div>
+              <button onClick={() => setEditingTeacher(null)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {editError && (
+              <div className="mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>{editError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveEditTeacher} className="space-y-4">
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Cách xưng hô *</label>
+                  <select
+                    value={editSalutation}
+                    onChange={(e) => setEditSalutation(e.target.value)}
+                    className="w-full text-xs px-2.5 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white"
+                  >
+                    <option value="Thầy">Thầy</option>
+                    <option value="Cô">Cô</option>
+                    <option value="Thầy giáo">Thầy giáo</option>
+                    <option value="Cô giáo">Cô giáo</option>
+                  </select>
+                </div>
+
+                <div className="col-span-2">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Họ và tên *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editFullName}
+                    onChange={(e) => setEditFullName(e.target.value)}
+                    className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Email *</label>
+                  <input
+                    type="email"
+                    required
+                    value={editEmail}
+                    onChange={(e) => setEditEmail(e.target.value)}
+                    className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Số điện thoại</label>
+                  <input
+                    type="text"
+                    value={editPhone}
+                    onChange={(e) => setEditPhone(e.target.value)}
+                    className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Trường học / Đơn vị công tác</label>
+                <input
+                  type="text"
+                  value={editSchool}
+                  onChange={(e) => setEditSchool(e.target.value)}
+                  className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              {isAdmin && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Vai trò</label>
+                    <select
+                      value={editRole}
+                      onChange={(e) => setEditRole(e.target.value as Role)}
+                      className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg bg-white"
+                    >
+                      <option value="teacher">Giáo viên</option>
+                      <option value="admin">Quản trị viên</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Trạng thái</label>
+                    <select
+                      value={editStatus}
+                      onChange={(e) => setEditStatus(e.target.value as any)}
+                      className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg bg-white"
+                    >
+                      <option value="active">Hoạt động</option>
+                      <option value="pending">Chờ phê duyệt</option>
+                      <option value="locked">Tạm khóa</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Môn giảng dạy phân công</label>
+                <div className="flex gap-3 text-xs">
+                  {['TOAN_10', 'TOAN_11', 'TOAN_12'].map((subj) => (
+                    <label key={subj} className="flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={editSubjects.includes(subj)}
+                        onChange={(e) => {
+                          if (e.target.checked) setEditSubjects([...editSubjects, subj]);
+                          else setEditSubjects(editSubjects.filter((s) => s !== subj));
+                        }}
+                        className="rounded text-indigo-600"
+                      />
+                      <span>{subj === 'TOAN_10' ? 'Toán 10' : subj === 'TOAN_11' ? 'Toán 11' : 'Toán 12'}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="p-3 bg-indigo-50/60 rounded-xl text-[11px] text-slate-600">
+                * Tên mới sẽ được cập nhật đồng bộ ngay lập tức trên các lớp học, đề thi và bảng điều khiển.
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingTeacher(null)}
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-xs"
+                >
+                  Lưu cập nhật
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          MODAL 3: XEM HỒ SƠ CHI TIẾT
+         ======================================================== */}
+      {viewingTeacher && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200 animate-in fade-in zoom-in-95 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <UserIcon className="w-5 h-5 text-indigo-600" />
+                <h3 className="text-base font-bold text-slate-900">Hồ Sơ Giáo Viên</h3>
+              </div>
+              <button onClick={() => setViewingTeacher(null)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-purple-600 to-indigo-600 text-white flex items-center justify-center text-lg font-bold">
+                  {viewingTeacher.fullName.split(' ').slice(-1)[0][0]}
+                </div>
+                <div>
+                  <h4 className="text-sm font-extrabold text-slate-900">{viewingTeacher.fullName}</h4>
+                  <p className="text-slate-500 font-mono text-[11px]">{viewingTeacher.username} · {viewingTeacher.email}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-slate-600">
+                <div className="p-2.5 bg-slate-50 rounded-lg">
+                  <span className="text-[10px] text-slate-400 block font-semibold">CÁCH XƯNG HÔ</span>
+                  <span className="font-bold text-slate-800">{viewingTeacher.salutation || 'Thầy'}</span>
+                </div>
+                <div className="p-2.5 bg-slate-50 rounded-lg">
+                  <span className="text-[10px] text-slate-400 block font-semibold">VAI TRÒ</span>
+                  <span className="font-bold text-indigo-700">
+                    {viewingTeacher.role === 'admin' ? 'Quản trị viên' : 'Giáo viên'}
+                  </span>
+                </div>
+                <div className="p-2.5 bg-slate-50 rounded-lg">
+                  <span className="text-[10px] text-slate-400 block font-semibold">ĐƠN VỊ CÔNG TÁC</span>
+                  <span className="font-bold text-slate-800">{viewingTeacher.schoolName}</span>
+                </div>
+                <div className="p-2.5 bg-slate-50 rounded-lg">
+                  <span className="text-[10px] text-slate-400 block font-semibold">TRẠNG THÁI</span>
+                  <span className="font-bold text-emerald-700">
+                    {viewingTeacher.status === 'active' ? 'Đang hoạt động' : 'Tạm khóa'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-2.5 bg-slate-50 rounded-lg text-slate-600">
+                <span className="text-[10px] text-slate-400 block font-semibold">MÔN PHÂN CÔNG GIẢNG DẠY</span>
+                <span className="font-semibold text-slate-800">
+                  {viewingTeacher.teachingSubjects?.join(', ') || 'Toàn bộ chuyên đề Toán'}
+                </span>
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-slate-100 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setViewingTeacher(null)}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          MODAL 4: XÁC NHẬN XÓA TÀI KHOẢN (Yêu cầu 2)
+         ======================================================== */}
+      {deletingTeacher && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200 animate-in fade-in zoom-in-95 space-y-4">
+            <div className="flex items-center gap-2 text-rose-600 pb-2 border-b border-slate-100">
+              <AlertTriangle className="w-5 h-5 shrink-0" />
+              <h3 className="text-base font-bold text-slate-900">Xác Nhận Xóa Giáo Viên</h3>
+            </div>
+
+            <div className="space-y-3 text-xs text-slate-600">
+              <p>
+                Bạn có chắc chắn muốn xóa tài khoản của{' '}
+                <strong className="text-slate-900">{deletingTeacher.fullName}</strong> (
+                <span className="font-mono text-indigo-700">{deletingTeacher.username}</span>)?
+              </p>
+
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-[11px] space-y-1">
+                <span className="font-bold">Chính sách bảo toàn dữ liệu:</span>
+                <p>
+                  Toàn bộ lớp học, học sinh, đề kiểm tra và điểm số đã chấm của giáo viên này sẽ được{' '}
+                  <strong>bảo lưu nguyên vẹn</strong> trong hệ thống.
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-slate-100 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setDeletingTeacher(null)}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                className="px-5 py-2 text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-lg shadow-xs"
+              >
+                Xác nhận xóa tài khoản
+              </button>
+            </div>
           </div>
         </div>
       )}

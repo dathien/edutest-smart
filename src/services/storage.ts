@@ -1,5 +1,6 @@
 import {
   User,
+  Role,
   Subject,
   ClassRoom,
   Student,
@@ -33,7 +34,8 @@ const INITIAL_USERS: User[] = [
   {
     id: 'user-admin',
     username: 'admin',
-    fullName: 'GV. Hồ Nguyễn Đa Thiện',
+    fullName: 'Thầy Hồ Nguyễn Đa Thiện',
+    salutation: 'Thầy',
     email: 'dathien.toan@edutest.edu.vn',
     role: 'admin',
     status: 'active',
@@ -46,6 +48,7 @@ const INITIAL_USERS: User[] = [
     id: 'user-teacher-1',
     username: 'lan.nguyen',
     fullName: 'Cô Nguyễn Thị Lan',
+    salutation: 'Cô',
     email: 'lan.nguyen@edutest.edu.vn',
     role: 'teacher',
     status: 'active',
@@ -58,6 +61,7 @@ const INITIAL_USERS: User[] = [
     id: 'user-teacher-pending',
     username: 'quoc.tran',
     fullName: 'Thầy Trần Quốc Tuấn',
+    salutation: 'Thầy',
     email: 'tuan.tran@edutest.edu.vn',
     role: 'teacher',
     status: 'pending',
@@ -93,10 +97,10 @@ const INITIAL_SUBJECTS: Subject[] = [
 
 // Initial Classes
 const INITIAL_CLASSES: ClassRoom[] = [
-  { id: 'class-12a1', name: '12A1', grade: 12, academicYear: '2025-2026', teacherId: 'user-admin', teacherName: 'GV. Hồ Nguyễn Đa Thiện', studentCount: 38, room: 'Phòng 301', createdAt: '2025-08-20' },
+  { id: 'class-12a1', name: '12A1', grade: 12, academicYear: '2025-2026', teacherId: 'user-admin', teacherName: 'Thầy Hồ Nguyễn Đa Thiện', studentCount: 38, room: 'Phòng 301', createdAt: '2025-08-20' },
   { id: 'class-12a2', name: '12A2', grade: 12, academicYear: '2025-2026', teacherId: 'user-teacher-1', teacherName: 'Cô Nguyễn Thị Lan', studentCount: 36, room: 'Phòng 302', createdAt: '2025-08-20' },
-  { id: 'class-11b1', name: '11B1', grade: 11, academicYear: '2025-2026', teacherId: 'user-admin', teacherName: 'GV. Hồ Nguyễn Đa Thiện', studentCount: 40, room: 'Phòng 204', createdAt: '2025-08-22' },
-  { id: 'class-10c1', name: '10C1', grade: 10, academicYear: '2025-2026', teacherId: 'user-admin', teacherName: 'GV. Hồ Nguyễn Đa Thiện', studentCount: 42, room: 'Phòng 102', createdAt: '2025-08-25' },
+  { id: 'class-11b1', name: '11B1', grade: 11, academicYear: '2025-2026', teacherId: 'user-admin', teacherName: 'Thầy Hồ Nguyễn Đa Thiện', studentCount: 40, room: 'Phòng 204', createdAt: '2025-08-22' },
+  { id: 'class-10c1', name: '10C1', grade: 10, academicYear: '2025-2026', teacherId: 'user-admin', teacherName: 'Thầy Hồ Nguyễn Đa Thiện', studentCount: 42, room: 'Phòng 102', createdAt: '2025-08-25' },
 ];
 
 // Initial Students
@@ -138,7 +142,7 @@ const INITIAL_QUESTIONS: Question[] = [
     diagramType: 'variation_table',
     diagramData: 'cubic_table',
     authorId: 'user-admin',
-    authorName: 'GV. Hồ Nguyễn Đa Thiện',
+    authorName: 'Thầy Hồ Nguyễn Đa Thiện',
     status: 'published',
     createdAt: '2025-09-10',
   },
@@ -164,7 +168,7 @@ const INITIAL_QUESTIONS: Question[] = [
     solution: 'Toạ độ trung điểm $M$ được tính theo công thức: $x_M = \\frac{x_A+x_B}{2} = \\frac{1+3}{2} = 2$, $y_M = \\frac{y_A+y_B}{2} = \\frac{2+(-2)}{2} = 0$, $z_M = \\frac{z_A+z_B}{2} = \\frac{-3+1}{2} = -1$. Vậy $M(2; 0; -1)$.',
     diagramType: 'coordinate_system',
     authorId: 'user-admin',
-    authorName: 'GV. Hồ Nguyễn Đa Thiện',
+    authorName: 'Thầy Hồ Nguyễn Đa Thiện',
     status: 'published',
     createdAt: '2025-09-12',
   },
@@ -189,7 +193,7 @@ const INITIAL_QUESTIONS: Question[] = [
     solution: 'a) Đúng; b) Đúng; c) Sai; d) Đúng. Điểm được tính theo quy định CV 7991: đúng 1 ý = 0.1đ; đúng 2 ý = 0.25đ; đúng 3 ý = 0.5đ; đúng 4 ý = 1.0đ.',
     diagramType: 'function_curve',
     authorId: 'user-admin',
-    authorName: 'GV. Hồ Nguyễn Đa Thiện',
+    authorName: 'Thầy Hồ Nguyễn Đa Thiện',
     status: 'published',
     createdAt: '2025-09-15',
   },
@@ -208,7 +212,7 @@ const INITIAL_QUESTIONS: Question[] = [
     points: 0.5,
     solution: 'Tập xác định: $D = (-\\infty; -2) \\cup (2; +\\infty)$. Tiệm cận đứng: $x = -2$ và $x = 2$ (2 đường). Tiệm cận ngang: $\\lim_{x \\to +\\infty} y = 2$ ($y = 2$), $\\lim_{x \\to -\\infty} y = -2$ ($y = -2$) (2 đường). Tổng cộng có 4 đường tiệm cận.',
     authorId: 'user-admin',
-    authorName: 'GV. Hồ Nguyễn Đa Thiện',
+    authorName: 'Thầy Hồ Nguyễn Đa Thiện',
     status: 'published',
     createdAt: '2025-09-18',
   },
@@ -227,7 +231,7 @@ const INITIAL_QUESTIONS: Question[] = [
     points: 0.5,
     solution: 'Thể tích $V = x^2 h = 4 \\Rightarrow h = \\frac{4}{x^2}$. Diện tích vật liệu: $S(x) = x^2 + 4xh = x^2 + \\frac{16}{x}$. Khảo sát $S\'(x) = 2x - \\frac{16}{x^2} = 0 \\Leftrightarrow x^3 = 8 \\Leftrightarrow x = 2$. Vậy $x = 2\\text{ m}$.',
     authorId: 'user-admin',
-    authorName: 'GV. Hồ Nguyễn Đa Thiện',
+    authorName: 'Thầy Hồ Nguyễn Đa Thiện',
     status: 'published',
     createdAt: '2025-09-20',
   },
@@ -248,7 +252,7 @@ const INITIAL_QUESTIONS: Question[] = [
     diagramType: 'geometry',
     diagramData: 'pyramid',
     authorId: 'user-admin',
-    authorName: 'GV. Hồ Nguyễn Đa Thiện',
+    authorName: 'Thầy Hồ Nguyễn Đa Thiện',
     status: 'published',
     createdAt: '2025-09-22',
   },
@@ -273,7 +277,7 @@ const INITIAL_QUESTIONS: Question[] = [
     points: 0.25,
     solution: 'Ta có $-\\frac{\\sqrt{3}}{2} = \\cos \\left(\\frac{5\\pi}{6}\\right)$. Do đó phương trình tương đương $x = \\pm \\frac{5\\pi}{6} + k2\\pi, k \\in \\mathbb{Z}$.',
     authorId: 'user-admin',
-    authorName: 'GV. Hồ Nguyễn Đa Thiện',
+    authorName: 'Thầy Hồ Nguyễn Đa Thiện',
     status: 'published',
     createdAt: '2025-09-25',
   },
@@ -298,7 +302,7 @@ const INITIAL_QUESTIONS: Question[] = [
     points: 0.25,
     solution: '$A \\cap B$ là tập hợp các phần tử thuộc cả $A$ và $B$. Vậy $A \\cap B = (1; 3]$.',
     authorId: 'user-admin',
-    authorName: 'GV. Hồ Nguyễn Đa Thiện',
+    authorName: 'Thầy Hồ Nguyễn Đa Thiện',
     status: 'published',
     createdAt: '2025-09-26',
   },
@@ -697,7 +701,7 @@ const INITIAL_EXAMS: Exam[] = [
     allowReviewSolutions: true,
     maxAttempts: 1,
     createdById: 'user-admin',
-    createdByName: 'GV. Hồ Nguyễn Đa Thiện',
+    createdByName: 'Thầy Hồ Nguyễn Đa Thiện',
     createdAt: '2025-09-25',
     status: 'published',
   },
@@ -723,7 +727,7 @@ const INITIAL_EXAMS: Exam[] = [
     allowReviewSolutions: true,
     maxAttempts: 3,
     createdById: 'user-admin',
-    createdByName: 'GV. Hồ Nguyễn Đa Thiện',
+    createdByName: 'Thầy Hồ Nguyễn Đa Thiện',
     createdAt: '2025-10-02',
     status: 'published',
   },
@@ -831,8 +835,8 @@ const INITIAL_SUBMISSIONS: ExamSubmission[] = [
 
 // Initial Audit Logs
 const INITIAL_LOGS: AuditLog[] = [
-  { id: 'log-1', userId: 'user-admin', userName: 'GV. Hồ Nguyễn Đa Thiện', action: 'Tạo ma trận', details: 'Khởi tạo Ma trận Giữa học kỳ I Toán 12 theo CV 7991/BGDĐT', timestamp: '2025-09-01 08:30:00' },
-  { id: 'log-2', userId: 'user-admin', userName: 'GV. Hồ Nguyễn Đa Thiện', action: 'Giao bài thi', details: 'Giao Đề kiểm tra GKI Toán 12 cho lớp 12A1, 12A2', timestamp: '2026-10-24 07:00:00' },
+  { id: 'log-1', userId: 'user-admin', userName: 'Thầy Hồ Nguyễn Đa Thiện', action: 'Tạo ma trận', details: 'Khởi tạo Ma trận Giữa học kỳ I Toán 12 theo CV 7991/BGDĐT', timestamp: '2025-09-01 08:30:00' },
+  { id: 'log-2', userId: 'user-admin', userName: 'Thầy Hồ Nguyễn Đa Thiện', action: 'Giao bài thi', details: 'Giao Đề kiểm tra GKI Toán 12 cho lớp 12A1, 12A2', timestamp: '2026-10-24 07:00:00' },
   { id: 'log-3', userId: 'user-teacher-1', userName: 'Cô Nguyễn Thị Lan', action: 'Chấm tự luận', details: 'Hoàn tất chấm tự luận cho học sinh HS1201', timestamp: '2026-10-24 10:15:20' },
 ];
 
@@ -857,7 +861,28 @@ export class StorageService {
 
   // Users
   static getUsers(): User[] {
-    return this.getItem<User[]>(STORAGE_KEYS.USERS, INITIAL_USERS);
+    const users = this.getItem<User[]>(STORAGE_KEYS.USERS, INITIAL_USERS);
+    let changed = false;
+    const migrated = users.map(u => {
+      // Auto-migrate legacy name and ensure salutation
+      if (u.id === 'user-admin' && (u.fullName === 'GV. Hồ Nguyễn Đa Thiện' || !u.salutation)) {
+        changed = true;
+        return { ...u, fullName: 'Thầy Hồ Nguyễn Đa Thiện', salutation: 'Thầy' };
+      }
+      if (u.id === 'user-teacher-1' && !u.salutation) {
+        changed = true;
+        return { ...u, salutation: 'Cô' };
+      }
+      if (u.id === 'user-teacher-pending' && !u.salutation) {
+        changed = true;
+        return { ...u, salutation: 'Thầy' };
+      }
+      return u;
+    });
+    if (changed) {
+      this.saveUsers(migrated);
+    }
+    return migrated;
   }
 
   static saveUsers(users: User[]): void {
@@ -881,6 +906,100 @@ export class StorageService {
   static updateUser(updated: User): void {
     const users = this.getUsers().map(u => u.id === updated.id ? updated : u);
     this.saveUsers(users);
+
+    // Sync current user if updating self
+    const curr = this.getItem<User | null>(STORAGE_KEYS.CURRENT_USER, null);
+    if (curr && curr.id === updated.id) {
+      this.setCurrentUser(updated);
+    }
+
+    // Sync teacherName across assigned classes
+    const classes = this.getClasses().map(c => {
+      if (c.teacherId === updated.id) {
+        return { ...c, teacherName: updated.fullName };
+      }
+      return c;
+    });
+    this.setItem(STORAGE_KEYS.CLASSES, classes);
+
+    this.addLog('Cập nhật hồ sơ giáo viên', `Đã cập nhật hồ sơ: ${updated.fullName} (${updated.username})`);
+  }
+
+  static createTeacher(teacherData: {
+    fullName: string;
+    salutation?: string;
+    username: string;
+    email: string;
+    teachingSubjects?: string[];
+    schoolName: string;
+    role: Role;
+    status: 'active' | 'pending' | 'locked';
+    phone?: string;
+  }): { success: boolean; message: string; user?: User } {
+    const users = this.getUsers();
+
+    // Check duplicate username
+    const normalizedUsername = teacherData.username.trim().toLowerCase();
+    if (users.some(u => u.username.toLowerCase() === normalizedUsername)) {
+      return { success: false, message: `Tên đăng nhập "${teacherData.username}" đã tồn tại. Vui lòng chọn tên khác.` };
+    }
+
+    // Check duplicate email
+    const normalizedEmail = teacherData.email.trim().toLowerCase();
+    if (users.some(u => u.email.toLowerCase() === normalizedEmail)) {
+      return { success: false, message: `Địa chỉ email "${teacherData.email}" đã được đăng ký trong hệ thống.` };
+    }
+
+    const newUser: User = {
+      id: `user-teacher-${Date.now()}`,
+      username: normalizedUsername,
+      fullName: teacherData.fullName.trim(),
+      salutation: teacherData.salutation?.trim() || 'Thầy',
+      email: normalizedEmail,
+      role: teacherData.role || 'teacher',
+      status: teacherData.status || 'active',
+      schoolName: teacherData.schoolName.trim() || 'THPT Chuyên & GDPT 2018',
+      phone: teacherData.phone?.trim() || '',
+      teachingSubjects: teacherData.teachingSubjects || ['TOAN_12'],
+      createdAt: new Date().toISOString().substring(0, 10),
+    };
+
+    users.push(newUser);
+    this.saveUsers(users);
+    this.addLog('Thêm giáo viên mới', `Quản trị viên đã tạo tài khoản: ${newUser.fullName} (${newUser.username})`);
+    return { success: true, message: 'Thêm tài khoản giáo viên thành công!', user: newUser };
+  }
+
+  static deleteTeacher(userId: string): { success: boolean; message: string } {
+    const users = this.getUsers();
+    const target = users.find(u => u.id === userId);
+    if (!target) {
+      return { success: false, message: 'Không tìm thấy tài khoản giáo viên cần xóa.' };
+    }
+
+    // Protection rule: Do NOT delete the last admin account
+    if (target.role === 'admin') {
+      const activeAdmins = users.filter(u => u.role === 'admin' && u.status === 'active');
+      if (activeAdmins.length <= 1) {
+        return { success: false, message: 'Không thể xóa tài khoản Quản trị viên cuối cùng của hệ thống!' };
+      }
+    }
+
+    // Delete user from list while preserving all classes, students, exams, and logs
+    const updatedUsers = users.filter(u => u.id !== userId);
+    this.saveUsers(updatedUsers);
+
+    // If current logged-in user was deleted, switch to admin
+    const curr = this.getCurrentUser();
+    if (curr.id === userId) {
+      this.setCurrentUser(updatedUsers[0]);
+    }
+
+    this.addLog('Xóa tài khoản', `Đã xóa tài khoản: ${target.fullName} (${target.username}). Dữ liệu lớp học, đề thi được bảo lưu.`);
+    return {
+      success: true,
+      message: `Đã xóa thành công tài khoản ${target.fullName}. Toàn bộ lớp học, học sinh và kết quả học tập liên quan vẫn được bảo lưu an toàn.`,
+    };
   }
 
   static approveUser(userId: string): void {
@@ -889,15 +1008,26 @@ export class StorageService {
     this.addLog('Phê duyệt tài khoản', `Quản trị viên đã phê duyệt tài khoản ID: ${userId}`);
   }
 
-  static toggleUserStatus(userId: string): void {
-    const users = this.getUsers().map(u => {
-      if (u.id === userId) {
-        const nextStatus = u.status === 'locked' ? 'active' : 'locked';
-        return { ...u, status: nextStatus as 'active' | 'locked' };
+  static toggleUserStatus(userId: string): { success: boolean; message: string } {
+    const users = this.getUsers();
+    const target = users.find(u => u.id === userId);
+    if (!target) {
+      return { success: false, message: 'Không tìm thấy tài khoản.' };
+    }
+
+    // Protection: Cannot lock last active admin
+    if (target.role === 'admin' && target.status === 'active') {
+      const activeAdmins = users.filter(u => u.role === 'admin' && u.status === 'active');
+      if (activeAdmins.length <= 1) {
+        return { success: false, message: 'Không thể khóa tài khoản Quản trị viên duy nhất đang hoạt động!' };
       }
-      return u;
-    });
-    this.saveUsers(users);
+    }
+
+    const nextStatus = target.status === 'locked' ? 'active' : 'locked';
+    const updatedUsers = users.map(u => u.id === userId ? { ...u, status: nextStatus as 'active' | 'locked' } : u);
+    this.saveUsers(updatedUsers);
+    this.addLog(nextStatus === 'locked' ? 'Khóa tài khoản' : 'Mở khóa tài khoản', `${target.fullName} (${target.username})`);
+    return { success: true, message: nextStatus === 'locked' ? `Đã tạm khóa tài khoản ${target.fullName}` : `Đã mở khóa tài khoản ${target.fullName}` };
   }
 
   // Subjects

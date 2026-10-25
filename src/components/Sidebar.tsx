@@ -48,6 +48,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isOpenMobile,
   onCloseMobile,
 }) => {
+  // Exact 8 required menus per specification
   const menuItems: MenuItem[] = [
     {
       id: 'dashboard',
@@ -74,7 +75,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       id: 'matrix',
-      label: 'Ma trận, đặc tả & đề thi',
+      label: 'Ma trận, bản đặc tả & đề kiểm tra',
       subLabel: 'Chuẩn Công văn 7991',
       icon: FileSpreadsheet,
       badge: '2025–2027',
@@ -106,7 +107,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     {
       id: 'settings',
       label: 'Tài khoản & cài đặt',
-      subLabel: 'Google Sheets / GAS API & Phân quyền',
+      subLabel: 'Quản lý giáo viên & Hệ thống',
       icon: Settings,
       allowedRoles: ['admin', 'teacher', 'student'],
     },
@@ -128,26 +129,27 @@ export const Sidebar: React.FC<SidebarProps> = ({
         />
       )}
 
-      {/* Sidebar Container */}
+      {/* Sidebar Container: Width 320px (w-80), no extra scrollbar on standard desktop */}
       <aside
-        className={`fixed lg:sticky top-0 lg:top-[57px] left-0 h-screen lg:h-[calc(100vh-57px)] w-72 bg-white border-r border-slate-200 z-40 transition-transform duration-200 ease-in-out flex flex-col justify-between ${
+        className={`fixed lg:sticky top-0 lg:top-[57px] left-0 h-screen lg:h-[calc(100vh-57px)] w-[320px] shrink-0 bg-white border-r border-slate-200 z-40 transition-transform duration-200 ease-in-out flex flex-col justify-between select-none ${
           isOpenMobile ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
-        {/* Navigation list */}
-        <div className="py-4 px-3 flex-1 flex flex-col justify-between overflow-y-auto">
+        <div className="py-3 px-3 flex-1 flex flex-col justify-between overflow-y-auto lg:overflow-y-visible">
           <div>
-            <div className="px-3 pb-3 mb-1 border-b border-slate-100 flex items-center justify-between">
-              <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">
-                Menu Chức Năng
+            {/* Header info */}
+            <div className="px-3 pb-2.5 mb-1.5 border-b border-slate-100 flex items-center justify-between">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                Danh mục chức năng
               </span>
-              <span className="text-[11px] font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full">
-                {userRole === 'admin' ? 'Admin' : userRole === 'teacher' ? 'Giáo viên' : 'Học sinh'}
+              <span className="text-[11px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200/60 px-2 py-0.5 rounded-md">
+                {userRole === 'admin' ? 'Quản trị viên' : userRole === 'teacher' ? 'Giáo viên' : 'Học sinh'}
               </span>
             </div>
 
-            <nav className="space-y-1 mt-2">
-              {menuItems.map((item, index) => {
+            {/* Menu List - clean typography, NO ellipsis truncation, wrapping allowed */}
+            <nav className="space-y-1">
+              {menuItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;
                 const isAllowed = item.allowedRoles.includes(userRole);
@@ -156,12 +158,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   return (
                     <div
                       key={item.id}
-                      className="px-3.5 py-2.5 rounded-xl text-slate-300 flex items-center justify-between cursor-not-allowed select-none text-sm"
+                      className="px-3 py-2 rounded-xl text-slate-300 flex items-center justify-between cursor-not-allowed select-none text-sm"
                       title="Chức năng chỉ dành cho Giáo viên / Quản trị viên"
                     >
                       <div className="flex items-center gap-3">
                         <Icon className="w-5 h-5 text-slate-300 shrink-0" />
-                        <span className="text-[15px] font-medium line-through">{item.label}</span>
+                        <span className="text-[14px] font-medium line-through text-slate-300">
+                          {item.label}
+                        </span>
                       </div>
                       <span className="text-[10px] text-slate-300">Khóa</span>
                     </div>
@@ -172,29 +176,30 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <button
                     key={item.id}
                     onClick={() => handleSelect(item.id)}
-                    className={`w-full group flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all text-left ${
+                    className={`w-full group flex items-start justify-between px-3 py-2 rounded-xl transition-all text-left ${
                       isActive
-                        ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-sm font-semibold'
+                        ? 'bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 text-white shadow-xs font-semibold'
                         : 'text-slate-700 hover:bg-slate-100/80 hover:text-indigo-700 font-medium'
                     }`}
                   >
-                    <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex items-start gap-2.5 min-w-0 flex-1">
                       <div
-                        className={`p-1.5 rounded-lg transition-colors shrink-0 ${
+                        className={`p-1.5 rounded-lg transition-colors shrink-0 mt-0.5 ${
                           isActive
                             ? 'bg-white/20 text-white'
                             : 'bg-slate-100 text-slate-600 group-hover:bg-indigo-50 group-hover:text-indigo-600'
                         }`}
                       >
-                        <Icon className="w-5 h-5" />
+                        <Icon className="w-4 h-4" />
                       </div>
-                      <div className="truncate">
-                        <div className="text-[15px] leading-tight truncate">
+                      <div className="flex-1 pr-1">
+                        {/* Full label without ellipsis */}
+                        <div className="text-[14px] leading-tight font-semibold break-words">
                           {item.label}
                         </div>
                         {item.subLabel && (
                           <div
-                            className={`text-[11px] truncate mt-0.5 ${
+                            className={`text-[11px] leading-tight mt-0.5 break-words hidden 2xl:block ${
                               isActive ? 'text-white/80' : 'text-slate-400 group-hover:text-indigo-500'
                             }`}
                           >
@@ -204,14 +209,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-1.5 shrink-0 ml-1">
+                    <div className="flex items-center gap-1 shrink-0 ml-1 mt-1">
                       {item.badge && !isActive && (
-                        <span className="text-[11px] font-medium text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+                        <span className="text-[10px] font-medium text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
                           {item.badge}
                         </span>
                       )}
                       <ChevronRight
-                        className={`w-4 h-4 transition-transform ${
+                        className={`w-3.5 h-3.5 transition-transform ${
                           isActive ? 'text-white' : 'text-slate-300 group-hover:text-slate-500'
                         }`}
                       />
@@ -222,15 +227,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </nav>
           </div>
 
-          {/* Quick Notice Card at Sidebar Bottom */}
-          <div className="mt-4 p-3 rounded-xl bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-100/80 text-xs text-slate-700">
-            <div className="flex items-center gap-1.5 font-bold text-indigo-900 mb-1">
-              <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-              Công văn 7991/BGDĐT
+          {/* Compact bottom indicator */}
+          <div className="mt-2 p-2.5 rounded-xl bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-100/80 text-[11px] text-slate-600 flex items-center justify-between">
+            <div className="flex items-center gap-1.5 font-bold text-indigo-900">
+              <Sparkles className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+              <span>Chương trình GDPT 2018</span>
             </div>
-            <p className="text-[12px] text-slate-600 leading-relaxed">
-              Cấu trúc đề Toán THPT: 12 trắc nghiệm 4 lựa chọn, 4 câu đúng/sai (a,b,c,d), 6 câu trả lời ngắn & tự luận.
-            </p>
+            <span className="text-[10px] font-semibold text-indigo-700 bg-white px-2 py-0.5 rounded border border-indigo-200/60">
+              Môn Toán THPT
+            </span>
           </div>
         </div>
       </aside>

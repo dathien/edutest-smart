@@ -204,7 +204,7 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
           <div>
             <h2 className="text-xl font-extrabold text-slate-800">Môn học & Ngân hàng câu hỏi</h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              Hỗ trợ GDPT 2018 (Kết nối tri thức). Kiến trúc độc lập đa môn học.
+              Tổ chức, tìm kiếm và biên soạn câu hỏi khoa học theo khối lớp và chủ đề bài học.
             </p>
           </div>
 
@@ -251,7 +251,7 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
                   : 'bg-slate-50 text-slate-300 border border-dashed border-slate-200 cursor-not-allowed'
               }`}
             >
-              {sub.name} {!sub.isActive && '(Chờ Giai đoạn II)'}
+              {sub.name} {!sub.isActive && '(Sắp ra mắt)'}
             </button>
           ))}
         </div>
@@ -830,7 +830,7 @@ export const QuestionBankView: React.FC<QuestionBankViewProps> = ({
               </div>
 
               <p className="text-[11px] text-slate-400 italic">
-                * Quy trình: Tải tài liệu → Phân tích → Trích xuất bảng → Xem trước → Đối chiếu → Xác nhận → Lưu. Không tự ý sửa nội dung gốc.
+                * Dữ liệu sau khi trích xuất sẽ được lưu an toàn vào ngân hàng câu hỏi của bạn.
               </p>
             </div>
           </div>

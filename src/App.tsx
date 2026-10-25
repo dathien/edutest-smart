@@ -37,7 +37,9 @@ export default function App() {
 
   // Reload all data from Storage
   const refreshAllData = useCallback(() => {
-    setUsers(StorageService.getUsers());
+    const updatedUsers = StorageService.getUsers();
+    setUsers(updatedUsers);
+    setCurrentUser(StorageService.getCurrentUser());
     setClasses(StorageService.getClasses());
     setStudents(StorageService.getStudents());
     setQuestions(StorageService.getQuestions());

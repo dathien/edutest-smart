@@ -9,6 +9,7 @@ export interface User {
   id: string;
   username: string;
   fullName: string;
+  salutation?: string; // e.g. 'Thầy', 'Cô', 'Thầy giáo', 'Cô giáo'
   email: string;
   role: Role;
   avatarUrl?: string;

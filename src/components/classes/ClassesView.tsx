@@ -646,10 +646,10 @@ export const ClassesView: React.FC<ClassesViewProps> = ({
               </button>
             </div>
 
-            {/* 7-Step Indicator per Section 5 */}
+            {/* Step Indicator */}
             <div className="mb-4 bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs">
               <div className="font-semibold text-slate-700 mb-1">
-                Quy trình 7 bước chuẩn:
+                Các bước xử lý danh sách:
               </div>
               <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500">
                 <span className="font-bold text-indigo-700">1. Đọc dữ liệu</span> →
@@ -683,7 +683,7 @@ export const ClassesView: React.FC<ClassesViewProps> = ({
                 </div>
 
                 <div className="text-[11px] text-slate-500">
-                  * Hệ thống không tự ý xóa dữ liệu hiện có khi nhập danh sách mới.
+                  * Dữ liệu học sinh mới sẽ được thêm vào danh sách lớp hiện có một cách an toàn.
                 </div>
               </div>
             ) : (

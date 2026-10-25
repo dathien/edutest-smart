@@ -20,6 +20,7 @@ import {
 import { User, ClassRoom, Student, Question, Exam, ExamAssignment, ExamSubmission } from '../../types';
 import { MainTab } from '../Sidebar';
 import { playSound } from '../../services/sound';
+import { DashboardSlideshow } from './DashboardSlideshow';
 
 interface DashboardViewProps {
   currentUser: User;
@@ -66,33 +67,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Welcome Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-purple-700 via-indigo-700 to-blue-700 p-6 md:p-8 text-white shadow-md">
-        <div className="relative z-10 max-w-3xl">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 text-white text-xs font-semibold backdrop-blur-xs mb-3">
-            <Sparkles className="w-3.5 h-3.5" />
-            Nền tảng Quản trị & Đánh giá Giáo dục THPT
-          </div>
-          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
-            Xin chào, {currentUser.fullName}!
-          </h1>
-          <p className="mt-2 text-sm md:text-base text-indigo-100 leading-relaxed font-normal">
-            Chào mừng bạn đến với <strong>EduTest Smart</strong>. Hệ thống đã đồng bộ chuẩn ma trận, bản đặc tả và đề kiểm tra theo Công văn 7991/BGDĐT cho môn Toán 10, 11, 12 năm học 2025–2026 và 2026–2027.
-          </p>
-          <div className="mt-4 flex flex-wrap items-center gap-4 text-xs text-indigo-100">
-            <span className="flex items-center gap-1">
-              <School className="w-4 h-4" /> {currentUser.schoolName}
-            </span>
-            <span>·</span>
-            <span>Vai trò: <strong className="text-white">{currentUser.role === 'admin' ? 'Quản trị viên' : currentUser.role === 'teacher' ? 'Giáo viên Toán' : 'Học sinh'}</strong></span>
-            <span>·</span>
-            <span>Năm học: <strong className="text-white">2025–2026</strong></span>
-          </div>
-        </div>
-
-        {/* Ambient background decoration */}
-        <div className="absolute -right-12 -bottom-12 w-64 h-64 rounded-full bg-white/10 blur-2xl pointer-events-none" />
-      </div>
+      {/* Dynamic Animated Slideshow */}
+      <DashboardSlideshow currentUser={currentUser} onNavigate={onNavigate} />
 
       {/* 7 Core Real Metric Cards per Section 17 */}
       <div>

@@ -12,7 +12,7 @@ export const Footer: React.FC = () => {
         </div>
         <div className="flex items-center gap-1.5 font-medium text-slate-600">
           <span>Copyright © 2026 – Phát triển bởi</span>
-          <span className="font-bold text-indigo-700">GV. Hồ Nguyễn Đa Thiện</span>
+          <span className="font-bold text-indigo-700">Thầy Hồ Nguyễn Đa Thiện</span>
         </div>
       </div>
     </footer>
