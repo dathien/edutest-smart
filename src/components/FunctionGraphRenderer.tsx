@@ -239,12 +239,10 @@ export const FunctionGraphRenderer: React.FC<FunctionGraphProps> = ({
       </div>
 
       {/* SVG Coordinate Space */}
-      <div className="flex justify-center">
+      <div className="flex justify-center w-full overflow-hidden">
         <svg
-          width={width}
-          height={height}
           viewBox={`0 0 ${width} ${height}`}
-          className="bg-white border border-slate-100 rounded-lg"
+          className="w-full max-w-[360px] h-auto bg-white border border-slate-100 rounded-lg"
         >
           {/* Grid lines */}
           {showGrid && (

@@ -129,22 +129,36 @@ export const Sidebar: React.FC<SidebarProps> = ({
         />
       )}
 
-      {/* Sidebar Container: Width 320px (w-80), no extra scrollbar on standard desktop */}
+      {/* Sidebar Container: Adaptive width on mobile (max-w-[85vw]), 320px on desktop */}
       <aside
-        className={`fixed lg:sticky top-0 lg:top-[57px] left-0 h-screen lg:h-[calc(100vh-57px)] w-[320px] shrink-0 bg-white border-r border-slate-200 z-40 transition-transform duration-200 ease-in-out flex flex-col justify-between select-none ${
+        className={`fixed lg:sticky top-0 lg:top-[57px] left-0 h-screen lg:h-[calc(100vh-57px)] w-[280px] sm:w-[320px] max-w-[85vw] shrink-0 bg-white border-r border-slate-200 z-50 lg:z-30 transition-transform duration-200 ease-in-out flex flex-col justify-between select-none shadow-xl lg:shadow-none ${
           isOpenMobile ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
-        <div className="py-3 px-3 flex-1 flex flex-col justify-between overflow-y-auto lg:overflow-y-visible">
+        <div className="py-3 px-3 flex-1 flex flex-col justify-between overflow-y-auto">
           <div>
-            {/* Header info */}
-            <div className="px-3 pb-2.5 mb-1.5 border-b border-slate-100 flex items-center justify-between">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                Danh mục chức năng
-              </span>
-              <span className="text-[11px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200/60 px-2 py-0.5 rounded-md">
-                {userRole === 'admin' ? 'Quản trị viên' : userRole === 'teacher' ? 'Giáo viên' : 'Học sinh'}
-              </span>
+            {/* Header info with mobile close button */}
+            <div className="px-2 pb-2.5 mb-1.5 border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                  Menu chức năng
+                </span>
+                <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200/60 px-1.5 py-0.5 rounded">
+                  {userRole === 'admin' ? 'Quản trị' : userRole === 'teacher' ? 'Giáo viên' : 'Học sinh'}
+                </span>
+              </div>
+
+              {/* Close Button on Mobile Drawer */}
+              <button
+                onClick={onCloseMobile}
+                className="lg:hidden p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                aria-label="Đóng menu"
+                title="Đóng menu"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
 
             {/* Menu List - clean typography, NO ellipsis truncation, wrapping allowed */}

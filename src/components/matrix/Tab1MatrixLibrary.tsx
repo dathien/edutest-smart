@@ -385,7 +385,15 @@ export const Tab1MatrixLibrary: React.FC<Tab1MatrixLibraryProps> = ({
 
                 {/* Cognitive Distribution Bar */}
                 <div className="mb-4">
-                  <div className="flex justify-between text-xs text-slate-600 mb-1">
+                  <div className="flex justify-between items-center text-xs text-slate-600 mb-1">
+                    <span className="font-semibold text-slate-700">Tỉ lệ nhận thức:</span>
+                    {matrix.cognitiveRatioConfig && (
+                      <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">
+                        Mục tiêu: {matrix.cognitiveRatioConfig.knowPct}% - {matrix.cognitiveRatioConfig.compPct}% - {matrix.cognitiveRatioConfig.appPct}%
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex justify-between text-[11px] text-slate-600 mb-1">
                     <span>Biết: {pctKnow}%</span>
                     <span>Hiểu: {pctComp}%</span>
                     <span>Vận dụng: {pctApp}%</span>
@@ -487,33 +495,33 @@ export const Tab1MatrixLibrary: React.FC<Tab1MatrixLibraryProps> = ({
 
       {/* View Matrix Detail Modal */}
       {viewingMatrix && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden border border-slate-200">
-            <div className="p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
-              <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-indigo-600">
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 animate-in fade-in">
+          <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[94vh] flex flex-col shadow-2xl overflow-hidden border border-slate-200">
+            <div className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50 gap-2">
+              <div className="min-w-0">
+                <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 block">
                   Toán {viewingMatrix.grade} • {viewingMatrix.academicYear} • {viewingMatrix.semester}
                 </span>
-                <h3 className="text-lg font-bold text-slate-800 mt-0.5">{viewingMatrix.title}</h3>
-                <p className="text-xs text-slate-500">{viewingMatrix.issuingUnit}</p>
+                <h3 className="text-base sm:text-lg font-bold text-slate-800 mt-0.5 truncate">{viewingMatrix.title}</h3>
+                <p className="text-xs text-slate-500 truncate">{viewingMatrix.issuingUnit}</p>
               </div>
               <button
                 onClick={() => setViewingMatrix(null)}
-                className="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-200"
+                className="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-200 shrink-0"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-6 overflow-y-auto space-y-4">
-              <div className="grid grid-cols-4 gap-3 bg-indigo-50/50 p-4 rounded-xl text-center border border-indigo-100">
+            <div className="p-4 sm:p-6 overflow-y-auto space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 bg-indigo-50/50 p-3 sm:p-4 rounded-xl text-center border border-indigo-100">
                 <div>
-                  <div className="text-xs text-slate-500">Thời gian</div>
-                  <div className="text-base font-bold text-slate-800">{viewingMatrix.durationMinutes} phút</div>
+                  <div className="text-[11px] sm:text-xs text-slate-500">Thời gian</div>
+                  <div className="text-sm sm:text-base font-bold text-slate-800">{viewingMatrix.durationMinutes} phút</div>
                 </div>
                 <div>
-                  <div className="text-xs text-slate-500">Tổng điểm</div>
-                  <div className="text-base font-bold text-indigo-600">{viewingMatrix.totalPoints} điểm</div>
+                  <div className="text-[11px] sm:text-xs text-slate-500">Tổng điểm</div>
+                  <div className="text-sm sm:text-base font-bold text-indigo-600">{viewingMatrix.totalPoints} điểm</div>
                 </div>
                 <div>
                   <div className="text-xs text-slate-500">Số lượng chủ đề</div>
@@ -526,6 +534,65 @@ export const Tab1MatrixLibrary: React.FC<Tab1MatrixLibraryProps> = ({
                   </div>
                 </div>
               </div>
+
+              {/* Cognitive levels breakdown */}
+              {(() => {
+                let knowPts = 0;
+                let compPts = 0;
+                let appPts = 0;
+                viewingMatrix.cells.forEach(c => {
+                  if (c.cognitiveLevel === 'nhan_biet') knowPts += c.totalPoints;
+                  else if (c.cognitiveLevel === 'thong_hieu') compPts += c.totalPoints;
+                  else appPts += c.totalPoints;
+                });
+                const total = viewingMatrix.totalPoints || 1;
+                const kPct = Math.round((knowPts / total) * 100);
+                const cPct = Math.round((compPts / total) * 100);
+                const aPct = Math.round((appPts / total) * 100);
+                const cfg = viewingMatrix.cognitiveRatioConfig;
+
+                return (
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs font-bold text-slate-700 mb-2">
+                      <span className="uppercase tracking-wider">Phân bố mức độ nhận thức</span>
+                      {cfg && (
+                        <span className="text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded font-semibold text-[11px] self-start sm:self-auto">
+                          Mục tiêu cấu hình: {cfg.knowPct}% Nhận biết – {cfg.compPct}% Thông hiểu – {cfg.appPct}% Vận dụng
+                        </span>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-center text-xs">
+                      <div className="p-2.5 bg-sky-50 rounded-lg border border-sky-100">
+                        <div className="text-sky-700 font-semibold">Nhận biết</div>
+                        <div className="text-base font-bold text-slate-800 mt-0.5">{knowPts.toFixed(2)} đ ({kPct}%)</div>
+                        {cfg && (
+                          <div className="text-[11px] text-slate-500 mt-0.5">
+                            Mục tiêu: {((total * cfg.knowPct) / 100).toFixed(2)} đ ({cfg.knowPct}%)
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-2.5 bg-amber-50 rounded-lg border border-amber-100">
+                        <div className="text-amber-700 font-semibold">Thông hiểu</div>
+                        <div className="text-base font-bold text-slate-800 mt-0.5">{compPts.toFixed(2)} đ ({cPct}%)</div>
+                        {cfg && (
+                          <div className="text-[11px] text-slate-500 mt-0.5">
+                            Mục tiêu: {((total * cfg.compPct) / 100).toFixed(2)} đ ({cfg.compPct}%)
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-2.5 bg-emerald-50 rounded-lg border border-emerald-100">
+                        <div className="text-emerald-700 font-semibold">Vận dụng</div>
+                        <div className="text-base font-bold text-slate-800 mt-0.5">{appPts.toFixed(2)} đ ({aPct}%)</div>
+                        {cfg && (
+                          <div className="text-[11px] text-slate-500 mt-0.5">
+                            Mục tiêu: {((total * cfg.appPct) / 100).toFixed(2)} đ ({cfg.appPct}%)
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
 
               <div className="overflow-x-auto border border-slate-200 rounded-xl">
                 <table className="w-full text-sm text-left border-collapse">
@@ -583,17 +650,17 @@ export const Tab1MatrixLibrary: React.FC<Tab1MatrixLibraryProps> = ({
               </div>
             </div>
 
-            <div className="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
+            <div className="p-3 sm:p-4 border-t border-slate-200 bg-slate-50 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handleExportWord(viewingMatrix)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50"
+                  className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50"
                 >
                   <FileDown className="w-4 h-4" /> Xuất Word
                 </button>
                 <button
                   onClick={() => handlePrint(viewingMatrix)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50"
+                  className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50"
                 >
                   <Printer className="w-4 h-4" /> In ma trận
                 </button>
@@ -605,7 +672,7 @@ export const Tab1MatrixLibrary: React.FC<Tab1MatrixLibraryProps> = ({
                     setViewingMatrix(null);
                     onSelectMatrixToComposeExam(id);
                   }}
-                  className="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm"
+                  className="w-full sm:w-auto px-4 py-2 text-xs sm:text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm text-center"
                 >
                   Tạo đề từ ma trận này
                 </button>

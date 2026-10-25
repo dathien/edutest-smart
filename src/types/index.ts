@@ -200,6 +200,31 @@ export interface MatrixCell {
   totalPoints: number;
 }
 
+export interface CognitiveRatioConfig {
+  knowPct: number; // Nhận biết %
+  compPct: number; // Thông hiểu %
+  appPct: number;  // Vận dụng %
+  isAutoBalanced?: boolean;
+  presetId?: string;
+  presetName?: string;
+}
+
+export interface CognitiveRatioPreset {
+  id: string;
+  name: string;
+  knowPct: number;
+  compPct: number;
+  appPct: number;
+  type: 'reference' | 'teacher_personal' | 'department_approved' | 'mandatory';
+  description?: string;
+  authorId?: string;
+  authorName?: string;
+  subject?: string;
+  grade?: number;
+  examType?: string;
+  createdAt?: string;
+}
+
 export interface MatrixDocument {
   id: string;
   title: string;
@@ -214,6 +239,7 @@ export interface MatrixDocument {
   durationMinutes: number;
   totalPoints: number;
   cells: MatrixCell[];
+  cognitiveRatioConfig?: CognitiveRatioConfig;
   examType?: ExamType | string;
   authorName?: string;
   notes?: string;

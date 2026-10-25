@@ -212,25 +212,27 @@ export const GradingView: React.FC<GradingViewProps> = ({
           <span className="text-xs text-slate-400">Phân bố số lượng học sinh theo từng dải điểm</span>
         </div>
 
-        <div className="grid grid-cols-5 gap-3 pt-2 text-center text-xs">
+        <div className="grid grid-cols-5 gap-1.5 sm:gap-3 pt-2 text-center text-xs">
           {[
-            { label: 'Dưới 5.0 (Yếu)', count: stats.scoreBuckets[0], color: 'from-rose-500 to-red-400' },
-            { label: '5.0 - 6.4 (Trung bình)', count: stats.scoreBuckets[1], color: 'from-amber-500 to-yellow-400' },
+            { label: '< 5.0 (Yếu)', count: stats.scoreBuckets[0], color: 'from-rose-500 to-red-400' },
+            { label: '5.0 - 6.4 (TB)', count: stats.scoreBuckets[1], color: 'from-amber-500 to-yellow-400' },
             { label: '6.5 - 7.9 (Khá)', count: stats.scoreBuckets[2], color: 'from-blue-500 to-cyan-400' },
             { label: '8.0 - 8.9 (Giỏi)', count: stats.scoreBuckets[3], color: 'from-indigo-500 to-purple-400' },
-            { label: '9.0 - 10.0 (Xuất sắc)', count: stats.scoreBuckets[4], color: 'from-emerald-500 to-teal-400' },
+            { label: '9.0 - 10 (Xuất sắc)', count: stats.scoreBuckets[4], color: 'from-emerald-500 to-teal-400' },
           ].map((bar, i) => {
             const heightPct = stats.count > 0 ? Math.max(15, (bar.count / stats.count) * 100) : 15;
             return (
-              <div key={i} className="flex flex-col items-center justify-end h-40">
-                <span className="text-sm font-black text-slate-800 mb-1">{bar.count} HS</span>
-                <div className="w-full max-w-[64px] bg-slate-100 rounded-t-xl overflow-hidden flex flex-col justify-end h-28">
+              <div key={i} className="flex flex-col items-center justify-end h-36 sm:h-40">
+                <span className="text-xs sm:text-sm font-black text-slate-800 mb-1">{bar.count} HS</span>
+                <div className="w-full max-w-[64px] bg-slate-100 rounded-t-xl overflow-hidden flex flex-col justify-end h-24 sm:h-28">
                   <div
                     className={`w-full rounded-t-xl bg-gradient-to-t ${bar.color} transition-all duration-500`}
                     style={{ height: `${heightPct}%` }}
                   />
                 </div>
-                <span className="text-[11px] font-semibold text-slate-600 mt-2">{bar.label}</span>
+                <span className="text-[10px] sm:text-[11px] font-semibold text-slate-600 mt-2 leading-tight">
+                  {bar.label}
+                </span>
               </div>
             );
           })}
@@ -240,15 +242,15 @@ export const GradingView: React.FC<GradingViewProps> = ({
       {/* Submissions List & Essay Grading Action */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
         <div className="p-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 bg-slate-50/50">
-          <div className="flex items-center gap-3">
-            <div className="relative">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
+            <div className="relative flex-1 sm:flex-none">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Tìm mã hoặc tên học sinh..."
-                className="pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                placeholder="Tìm mã hoặc tên HS..."
+                className="w-full sm:w-auto pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500"
               />
             </div>
 
@@ -269,8 +271,72 @@ export const GradingView: React.FC<GradingViewProps> = ({
           </div>
         </div>
 
-        {/* Submissions Table */}
-        <div className="overflow-x-auto">
+        {/* Mobile Submissions Cards (md:hidden) */}
+        <div className="md:hidden divide-y divide-slate-100">
+          {filteredSubmissions.map((subm) => (
+            <div key={subm.id} className="p-4 space-y-3 bg-white">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-mono text-xs font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded">
+                      {subm.studentCode}
+                    </span>
+                    <h4 className="font-bold text-sm text-slate-800">{subm.studentName}</h4>
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Lớp {subm.className} · Nộp lúc: {subm.submittedAt}
+                  </p>
+                </div>
+
+                {subm.isGraded ? (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded shrink-0">
+                    <CheckCheck className="w-3.5 h-3.5" /> Hoàn tất
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded shrink-0">
+                    <AlertCircle className="w-3.5 h-3.5" /> Chờ chấm TL
+                  </span>
+                )}
+              </div>
+
+              {/* Score bar */}
+              <div className="grid grid-cols-3 gap-2 bg-slate-50 p-2 rounded-xl text-center text-xs">
+                <div>
+                  <span className="text-[10px] text-slate-400 block">Trắc nghiệm</span>
+                  <span className="font-mono font-bold text-slate-800">{subm.autoScore.toFixed(2)}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 block">Tự luận</span>
+                  <span className="font-mono font-bold text-purple-700">
+                    {subm.manualScore > 0 ? subm.manualScore.toFixed(2) : '—'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 block">Tổng điểm</span>
+                  <span className="font-mono font-black text-indigo-700">
+                    {((subm.totalScore / subm.maxScore) * 10).toFixed(1)} / 10
+                  </span>
+                </div>
+              </div>
+
+              {/* Action Button */}
+              <button
+                onClick={() => {
+                  setGradingSubmission(subm);
+                  setEssayPointsInput(subm.manualScore || 1.5);
+                  setEssayFeedbackInput(subm.answers['q-math-12-06']?.teacherFeedback || '');
+                  playSound('click');
+                }}
+                className="w-full py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-xl transition-colors flex items-center justify-center gap-1.5"
+              >
+                <Edit className="w-3.5 h-3.5" /> Chấm / Xem lại bài làm
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop Submissions Table (hidden md:block) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="bg-slate-100/70 text-slate-700 font-bold border-b border-slate-200">

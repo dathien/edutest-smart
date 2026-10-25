@@ -20,10 +20,12 @@ import {
   QuestionType,
   User,
   ExamType,
+  CognitiveRatioConfig,
 } from '../../types';
 import { StorageService } from '../../services/storage';
 import { playSound } from '../../services/sound';
 import { downloadWordDocument, printDocument } from './exportUtils';
+import { CognitiveRatioConfigurator } from './CognitiveRatioConfigurator';
 
 interface Tab2MatrixBuilderProps {
   currentUser: User;
@@ -116,6 +118,20 @@ export const Tab2MatrixBuilder: React.FC<Tab2MatrixBuilderProps> = ({
     editingMatrix?.notes || 'Căn cứ Công văn 7991/BGDĐT-GDTrH về xây dựng ma trận đặc tả đề kiểm tra'
   );
 
+  // Cognitive Ratio Configuration State (Nhận biết, Thông hiểu, Vận dụng)
+  const [cognitiveRatio, setCognitiveRatio] = useState<CognitiveRatioConfig>(
+    editingMatrix?.cognitiveRatioConfig || {
+      knowPct: 40,
+      compPct: 30,
+      appPct: 30,
+      isAutoBalanced: false,
+      presetId: 'preset-a',
+    }
+  );
+
+  // Mobile View Mode toggle: cards vs full table
+  const [mobileViewMode, setMobileViewMode] = useState<'cards' | 'table'>('cards');
+
   // Matrix Table Cells
   const [cells, setCells] = useState<MatrixCell[]>(
     editingMatrix?.cells?.length
@@ -199,6 +215,9 @@ export const Tab2MatrixBuilder: React.FC<Tab2MatrixBuilderProps> = ({
       setAuthorName(editingMatrix.authorName || currentUser.fullName);
       setNotes(editingMatrix.notes || '');
       setCells(editingMatrix.cells || []);
+      if (editingMatrix.cognitiveRatioConfig) {
+        setCognitiveRatio(editingMatrix.cognitiveRatioConfig);
+      }
     }
   }, [editingMatrix, currentUser]);
 
@@ -490,6 +509,17 @@ export const Tab2MatrixBuilder: React.FC<Tab2MatrixBuilderProps> = ({
       return;
     }
 
+    const totalRatio =
+      Number(cognitiveRatio.knowPct) +
+      Number(cognitiveRatio.compPct) +
+      Number(cognitiveRatio.appPct);
+    if (totalRatio !== 100) {
+      alert(
+        `Tổng tỉ lệ hiện tại là ${totalRatio}%. Vui lòng điều chỉnh về 100% trước khi lưu ma trận.`
+      );
+      return;
+    }
+
     playSound('correct');
     const newMatrixDoc: MatrixDocument = {
       id: matrixId,
@@ -507,6 +537,7 @@ export const Tab2MatrixBuilder: React.FC<Tab2MatrixBuilderProps> = ({
       examType,
       authorName,
       notes,
+      cognitiveRatioConfig: cognitiveRatio,
       cells,
       createdAt: editingMatrix?.createdAt || new Date().toISOString().substring(0, 10),
       updatedAt: new Date().toISOString().substring(0, 10),
@@ -783,7 +814,22 @@ export const Tab2MatrixBuilder: React.FC<Tab2MatrixBuilderProps> = ({
         </div>
       </div>
 
-      {/* Real-time Statistics & Standards Bar */}
+      {/* Section 2: Thiết lập Tỉ lệ Mức độ Nhận thức (Nhận biết - Thông hiểu - Vận dụng) */}
+      <CognitiveRatioConfigurator
+        currentUser={currentUser}
+        targetTotalPoints={targetTotalPoints}
+        currentCells={cells}
+        grade={grade}
+        examType={examType}
+        initialRatio={cognitiveRatio}
+        onRatioChange={setCognitiveRatio}
+        onApplyAutoDistribution={newCells => {
+          setCells(newCells);
+          playSound('correct');
+        }}
+      />
+
+      {/* Real-time Statistics & Target vs Actual Comparison */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {/* Total Questions & Points */}
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
@@ -821,208 +867,420 @@ export const Tab2MatrixBuilder: React.FC<Tab2MatrixBuilderProps> = ({
         <div className="bg-sky-50/50 p-4 rounded-xl border border-sky-100">
           <div className="flex justify-between items-center text-xs font-semibold text-sky-700">
             <span>Mức độ: Nhận biết</span>
-            <span className="font-bold text-sm">{cognitiveBreakdown.knowPct}%</span>
+            <span className="font-bold text-sm">
+              {cognitiveBreakdown.knowPct}%{' '}
+              <span className="text-[10px] text-sky-600 font-normal">
+                (MT: {cognitiveRatio.knowPct}%)
+              </span>
+            </span>
           </div>
           <div className="mt-2 text-slate-800 font-bold text-lg">
             {cognitiveBreakdown.knowPts.toFixed(2)} điểm
           </div>
-          <div className="text-xs text-slate-500 mt-0.5">{cognitiveBreakdown.knowCount} câu hỏi</div>
+          <div className="flex justify-between items-center text-xs text-slate-500 mt-0.5">
+            <span>{cognitiveBreakdown.knowCount} câu hỏi</span>
+            <span>MT: {((targetTotalPoints * cognitiveRatio.knowPct) / 100).toFixed(2)} đ</span>
+          </div>
         </div>
 
         {/* Thông hiểu */}
         <div className="bg-amber-50/50 p-4 rounded-xl border border-amber-100">
           <div className="flex justify-between items-center text-xs font-semibold text-amber-700">
             <span>Mức độ: Thông hiểu</span>
-            <span className="font-bold text-sm">{cognitiveBreakdown.compPct}%</span>
+            <span className="font-bold text-sm">
+              {cognitiveBreakdown.compPct}%{' '}
+              <span className="text-[10px] text-amber-600 font-normal">
+                (MT: {cognitiveRatio.compPct}%)
+              </span>
+            </span>
           </div>
           <div className="mt-2 text-slate-800 font-bold text-lg">
             {cognitiveBreakdown.compPts.toFixed(2)} điểm
           </div>
-          <div className="text-xs text-slate-500 mt-0.5">{cognitiveBreakdown.compCount} câu hỏi</div>
+          <div className="flex justify-between items-center text-xs text-slate-500 mt-0.5">
+            <span>{cognitiveBreakdown.compCount} câu hỏi</span>
+            <span>MT: {((targetTotalPoints * cognitiveRatio.compPct) / 100).toFixed(2)} đ</span>
+          </div>
         </div>
 
         {/* Vận dụng */}
         <div className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100">
           <div className="flex justify-between items-center text-xs font-semibold text-emerald-700">
             <span>Mức độ: Vận dụng</span>
-            <span className="font-bold text-sm">{cognitiveBreakdown.appPct}%</span>
+            <span className="font-bold text-sm">
+              {cognitiveBreakdown.appPct}%{' '}
+              <span className="text-[10px] text-emerald-600 font-normal">
+                (MT: {cognitiveRatio.appPct}%)
+              </span>
+            </span>
           </div>
           <div className="mt-2 text-slate-800 font-bold text-lg">
             {cognitiveBreakdown.appPts.toFixed(2)} điểm
           </div>
-          <div className="text-xs text-slate-500 mt-0.5">{cognitiveBreakdown.appCount} câu hỏi</div>
+          <div className="flex justify-between items-center text-xs text-slate-500 mt-0.5">
+            <span>{cognitiveBreakdown.appCount} câu hỏi</span>
+            <span>MT: {((targetTotalPoints * cognitiveRatio.appPct) / 100).toFixed(2)} đ</span>
+          </div>
         </div>
       </div>
 
-      {/* Standards recommendation note */}
+      {/* Target vs Actual Comparison Guidance */}
       <div className="p-3 bg-indigo-50/70 border border-indigo-100 rounded-lg text-xs text-slate-700 flex items-start gap-2">
         <Sparkles className="w-4 h-4 text-indigo-600 mt-0.5 shrink-0" />
-        <div>
-          <strong>Khuyến nghị Bộ GD&ĐT (CV 7991):</strong> Tỉ lệ điểm kiểm tra định kỳ thông thường là{' '}
-          <strong>40% Nhận biết – 30% Thông hiểu – 30% Vận dụng</strong> (hoặc 30% – 40% – 30%). Hiện tại tỉ lệ của bạn là:{' '}
-          <span className="font-semibold text-indigo-700">
-            {cognitiveBreakdown.knowPct}% – {cognitiveBreakdown.compPct}% – {cognitiveBreakdown.appPct}%
-          </span>
-          .
+        <div className="flex-1">
+          <div>
+            <strong>Cấu hình tỉ lệ mục tiêu giáo viên thiết lập:</strong>{' '}
+            <span className="font-semibold text-indigo-700">
+              {cognitiveRatio.knowPct}% Nhận biết (
+              {((targetTotalPoints * cognitiveRatio.knowPct) / 100).toFixed(2)}đ) –{' '}
+              {cognitiveRatio.compPct}% Thông hiểu (
+              {((targetTotalPoints * cognitiveRatio.compPct) / 100).toFixed(2)}đ) –{' '}
+              {cognitiveRatio.appPct}% Vận dụng (
+              {((targetTotalPoints * cognitiveRatio.appPct) / 100).toFixed(2)}đ)
+            </span>
+            .
+          </div>
+          <div className="mt-1 text-slate-600">
+            Thực tế ma trận hiện tại:{' '}
+            <span className="font-medium text-slate-800">
+              {cognitiveBreakdown.knowPct}% – {cognitiveBreakdown.compPct}% –{' '}
+              {cognitiveBreakdown.appPct}%
+            </span>{' '}
+            ({cognitiveBreakdown.knowPts.toFixed(2)}đ – {cognitiveBreakdown.compPts.toFixed(2)}đ –{' '}
+            {cognitiveBreakdown.appPts.toFixed(2)}đ).
+            {Math.abs(cognitiveBreakdown.knowPct - cognitiveRatio.knowPct) <= 2 &&
+            Math.abs(cognitiveBreakdown.compPct - cognitiveRatio.compPct) <= 2 &&
+            Math.abs(cognitiveBreakdown.appPct - cognitiveRatio.appPct) <= 2 ? (
+              <span className="ml-1.5 inline-flex items-center gap-1 text-emerald-600 font-semibold">
+                <CheckCircle className="w-3.5 h-3.5 inline" /> Khớp hoàn hảo với tỉ lệ mục tiêu!
+              </span>
+            ) : (
+              <span className="ml-1.5 text-slate-500">
+                (Có thể dùng nút "Tự động phân bổ câu hỏi" ở trên để cân đối chính xác theo tỉ lệ)
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Section 2.2: Interactive Matrix Table */}
-      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
-        <div className="flex items-center justify-between">
+      {/* Section 2.2: Interactive Matrix Table / Cards */}
+      <div className="bg-white p-4 sm:p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
             <Layers className="w-5 h-5 text-indigo-600" />
             2. Bảng phân bố ma trận chi tiết ({cells.length} dòng)
           </h3>
-          <button
-            onClick={handleAddRow}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-2xs transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Thêm dòng ma trận
-          </button>
+
+          <div className="flex items-center gap-2">
+            {/* View Mode Toggle for Responsive Editing */}
+            <div className="flex items-center bg-slate-100 p-0.5 rounded-lg text-xs font-semibold">
+              <button
+                type="button"
+                onClick={() => setMobileViewMode('cards')}
+                className={`px-2.5 py-1 rounded-md transition-all ${
+                  mobileViewMode === 'cards'
+                    ? 'bg-white text-indigo-700 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                📱 Dạng thẻ
+              </button>
+              <button
+                type="button"
+                onClick={() => setMobileViewMode('table')}
+                className={`px-2.5 py-1 rounded-md transition-all ${
+                  mobileViewMode === 'table'
+                    ? 'bg-white text-indigo-700 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                📊 Dạng bảng
+              </button>
+            </div>
+
+            <button
+              onClick={handleAddRow}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-2xs transition-colors shrink-0"
+            >
+              <Plus className="w-4 h-4" />
+              Thêm dòng
+            </button>
+          </div>
         </div>
 
-        <div className="overflow-x-auto border border-slate-200 rounded-xl">
-          <table className="w-full text-sm text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-100 text-slate-700 text-xs font-bold uppercase tracking-wider">
-                <th className="p-3 border-b text-center w-12">TT</th>
-                <th className="p-3 border-b min-w-[220px]">Chủ đề / Mạch kiến thức</th>
-                <th className="p-3 border-b min-w-[240px]">Yêu cầu cần đạt</th>
-                <th className="p-3 border-b w-36">Mức độ</th>
-                <th className="p-3 border-b w-44">Hình thức câu hỏi</th>
-                <th className="p-3 border-b text-center w-24">Số câu</th>
-                <th className="p-3 border-b text-center w-24">Điểm/câu</th>
-                <th className="p-3 border-b text-center w-28">Tổng điểm</th>
-                <th className="p-3 border-b text-center w-12">Xoá</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-slate-700">
-              {cells.map((cell, idx) => (
-                <tr key={cell.id} className="hover:bg-slate-50/70">
-                  <td className="p-3 text-center text-slate-400 font-semibold">{idx + 1}</td>
+        {/* Mode 1: Mobile Card View */}
+        {mobileViewMode === 'cards' && (
+          <div className="space-y-3">
+            {cells.map((cell, idx) => (
+              <div 
+                key={cell.id} 
+                className="p-4 rounded-xl border border-slate-200 bg-white hover:border-indigo-200 transition-colors shadow-2xs space-y-3"
+              >
+                {/* Card Header */}
+                <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-700 text-xs font-bold flex items-center justify-center shrink-0">
+                      {idx + 1}
+                    </span>
+                    <span className="text-xs font-bold text-slate-800 line-clamp-1">
+                      {cell.topic || 'Chủ đề chưa đặt tên'}
+                    </span>
+                  </div>
 
-                  {/* Topic */}
-                  <td className="p-2">
-                    <input
-                      type="text"
-                      list={`topics-grade-${grade}`}
-                      value={cell.topic}
-                      onChange={e => handleUpdateRow(cell.id, 'topic', e.target.value)}
-                      className="w-full px-2.5 py-1.5 text-xs rounded border border-slate-300 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-medium"
-                      placeholder="Chọn hoặc nhập chủ đề..."
-                    />
-                    <datalist id={`topics-grade-${grade}`}>
-                      {(MATH_TOPICS_BY_GRADE[grade] || []).map((t, i) => (
-                        <option key={i} value={t} />
-                      ))}
-                    </datalist>
-                  </td>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveRow(cell.id)}
+                    className="p-1 text-slate-400 hover:text-rose-600 rounded transition-colors"
+                    title="Xoá dòng này"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
 
-                  {/* Learning Outcome */}
-                  <td className="p-2">
-                    <input
-                      type="text"
-                      value={cell.learningOutcome}
-                      onChange={e => handleUpdateRow(cell.id, 'learningOutcome', e.target.value)}
-                      className="w-full px-2.5 py-1.5 text-xs rounded border border-slate-300 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                      placeholder="Mô tả yêu cầu cần đạt..."
-                    />
-                  </td>
+                {/* Topic field */}
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">
+                    Chủ đề / Mạch kiến thức
+                  </label>
+                  <input
+                    type="text"
+                    list={`topics-grade-${grade}`}
+                    value={cell.topic}
+                    onChange={e => handleUpdateRow(cell.id, 'topic', e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-medium"
+                    placeholder="Chọn hoặc nhập chủ đề..."
+                  />
+                  <datalist id={`topics-grade-${grade}`}>
+                    {(MATH_TOPICS_BY_GRADE[grade] || []).map((t, i) => (
+                      <option key={i} value={t} />
+                    ))}
+                  </datalist>
+                </div>
 
-                  {/* Cognitive Level */}
-                  <td className="p-2">
+                {/* Learning Outcome field */}
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">
+                    Yêu cầu cần đạt
+                  </label>
+                  <input
+                    type="text"
+                    value={cell.learningOutcome}
+                    onChange={e => handleUpdateRow(cell.id, 'learningOutcome', e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    placeholder="Mô tả yêu cầu cần đạt..."
+                  />
+                </div>
+
+                {/* Cognitive Level & Question Type in 2 columns */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-500 mb-1">
+                      Mức độ nhận thức
+                    </label>
                     <select
                       value={cell.cognitiveLevel}
                       onChange={e => handleUpdateRow(cell.id, 'cognitiveLevel', e.target.value)}
-                      className="w-full px-2 py-1.5 text-xs rounded border border-slate-300 font-medium"
+                      className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 font-medium"
                     >
                       <option value="nhan_biet">Nhận biết</option>
                       <option value="thong_hieu">Thông hiểu</option>
                       <option value="van_dung">Vận dụng</option>
                       <option value="van_dung_cao">Vận dụng cao</option>
                     </select>
-                  </td>
+                  </div>
 
-                  {/* Question Type */}
-                  <td className="p-2">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-500 mb-1">
+                      Hình thức câu hỏi
+                    </label>
                     <select
                       value={cell.questionType}
                       onChange={e => handleUpdateRow(cell.id, 'questionType', e.target.value)}
-                      className="w-full px-2 py-1.5 text-xs rounded border border-slate-300"
+                      className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300"
                     >
                       <option value="multiple_choice">Trắc nghiệm (4 lựa chọn)</option>
                       <option value="true_false">Đúng / Sai (4 ý a,b,c,d)</option>
                       <option value="short_answer">Trả lời ngắn</option>
                       <option value="essay">Tự luận</option>
                     </select>
-                  </td>
+                  </div>
+                </div>
 
-                  {/* Question Count */}
-                  <td className="p-2 text-center">
+                {/* Numbers: Count, Points per question, Total Points in 3 columns */}
+                <div className="grid grid-cols-3 gap-2 bg-slate-50 p-2.5 rounded-lg border border-slate-100 text-center">
+                  <div>
+                    <span className="block text-[10px] text-slate-500">Số câu</span>
                     <input
                       type="number"
                       min="0"
                       value={cell.questionCount}
                       onChange={e => handleUpdateRow(cell.id, 'questionCount', Number(e.target.value))}
-                      className="w-16 px-2 py-1.5 text-xs rounded border border-slate-300 text-center font-bold"
+                      className="w-full max-w-[64px] mx-auto mt-1 px-1 py-1 text-xs font-bold text-center border border-slate-300 rounded bg-white"
                     />
-                  </td>
+                  </div>
 
-                  {/* Points per question */}
-                  <td className="p-2 text-center">
+                  <div>
+                    <span className="block text-[10px] text-slate-500">Điểm / câu</span>
                     <input
                       type="number"
                       step="0.05"
                       min="0"
                       value={cell.pointsPerQuestion}
-                      onChange={e =>
-                        handleUpdateRow(cell.id, 'pointsPerQuestion', Number(e.target.value))
-                      }
-                      className="w-16 px-2 py-1.5 text-xs rounded border border-slate-300 text-center font-medium"
+                      onChange={e => handleUpdateRow(cell.id, 'pointsPerQuestion', Number(e.target.value))}
+                      className="w-full max-w-[64px] mx-auto mt-1 px-1 py-1 text-xs font-medium text-center border border-slate-300 rounded bg-white"
                     />
-                  </td>
+                  </div>
 
-                  {/* Total points */}
-                  <td className="p-2 text-center">
-                    <span className="font-bold text-indigo-600 text-xs">
+                  <div>
+                    <span className="block text-[10px] text-slate-500">Tổng điểm</span>
+                    <div className="mt-1 py-1 text-xs font-extrabold text-indigo-700">
                       {cell.totalPoints.toFixed(2)} đ
-                    </span>
-                  </td>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
-                  {/* Delete Button */}
-                  <td className="p-2 text-center">
-                    <button
-                      onClick={() => handleRemoveRow(cell.id)}
-                      className="p-1 text-slate-400 hover:text-rose-600 rounded transition-colors"
-                      title="Xoá dòng này"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </td>
+        {/* Mode 2: Full Table View (with horizontal scroll) */}
+        {mobileViewMode === 'table' && (
+          <div className="overflow-x-auto border border-slate-200 rounded-xl">
+            <table className="w-full text-sm text-left border-collapse min-w-[700px]">
+              <thead>
+                <tr className="bg-slate-100 text-slate-700 text-xs font-bold uppercase tracking-wider">
+                  <th className="p-3 border-b text-center w-12">TT</th>
+                  <th className="p-3 border-b min-w-[200px]">Chủ đề / Mạch kiến thức</th>
+                  <th className="p-3 border-b min-w-[220px]">Yêu cầu cần đạt</th>
+                  <th className="p-3 border-b w-32">Mức độ</th>
+                  <th className="p-3 border-b w-40">Hình thức</th>
+                  <th className="p-3 border-b text-center w-20">Số câu</th>
+                  <th className="p-3 border-b text-center w-20">Điểm/câu</th>
+                  <th className="p-3 border-b text-center w-24">Tổng điểm</th>
+                  <th className="p-3 border-b text-center w-12">Xoá</th>
                 </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              <tr className="bg-slate-100/90 font-bold text-slate-800 text-xs">
-                <td colSpan={5} className="p-3 text-right">
-                  TỔNG CỘNG TOÀN MA TRẬN:
-                </td>
-                <td className="p-3 text-center text-sm">{totalQuestions} câu</td>
-                <td className="p-3 text-center">-</td>
-                <td
-                  className={`p-3 text-center text-sm ${
-                    isPointsBalanced ? 'text-emerald-700' : 'text-rose-700'
-                  }`}
-                >
-                  {totalCalculatedPoints.toFixed(2)} đ
-                </td>
-                <td></td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-slate-700">
+                {cells.map((cell, idx) => (
+                  <tr key={cell.id} className="hover:bg-slate-50/70">
+                    <td className="p-3 text-center text-slate-400 font-semibold">{idx + 1}</td>
+
+                    {/* Topic */}
+                    <td className="p-2">
+                      <input
+                        type="text"
+                        list={`topics-grade-${grade}`}
+                        value={cell.topic}
+                        onChange={e => handleUpdateRow(cell.id, 'topic', e.target.value)}
+                        className="w-full px-2.5 py-1.5 text-xs rounded border border-slate-300 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-medium"
+                        placeholder="Chọn hoặc nhập chủ đề..."
+                      />
+                    </td>
+
+                    {/* Learning Outcome */}
+                    <td className="p-2">
+                      <input
+                        type="text"
+                        value={cell.learningOutcome}
+                        onChange={e => handleUpdateRow(cell.id, 'learningOutcome', e.target.value)}
+                        className="w-full px-2.5 py-1.5 text-xs rounded border border-slate-300 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        placeholder="Mô tả yêu cầu cần đạt..."
+                      />
+                    </td>
+
+                    {/* Cognitive Level */}
+                    <td className="p-2">
+                      <select
+                        value={cell.cognitiveLevel}
+                        onChange={e => handleUpdateRow(cell.id, 'cognitiveLevel', e.target.value)}
+                        className="w-full px-2 py-1.5 text-xs rounded border border-slate-300 font-medium"
+                      >
+                        <option value="nhan_biet">Nhận biết</option>
+                        <option value="thong_hieu">Thông hiểu</option>
+                        <option value="van_dung">Vận dụng</option>
+                        <option value="van_dung_cao">Vận dụng cao</option>
+                      </select>
+                    </td>
+
+                    {/* Question Type */}
+                    <td className="p-2">
+                      <select
+                        value={cell.questionType}
+                        onChange={e => handleUpdateRow(cell.id, 'questionType', e.target.value)}
+                        className="w-full px-2 py-1.5 text-xs rounded border border-slate-300"
+                      >
+                        <option value="multiple_choice">Trắc nghiệm</option>
+                        <option value="true_false">Đúng / Sai</option>
+                        <option value="short_answer">Trả lời ngắn</option>
+                        <option value="essay">Tự luận</option>
+                      </select>
+                    </td>
+
+                    {/* Question Count */}
+                    <td className="p-2 text-center">
+                      <input
+                        type="number"
+                        min="0"
+                        value={cell.questionCount}
+                        onChange={e => handleUpdateRow(cell.id, 'questionCount', Number(e.target.value))}
+                        className="w-14 px-1.5 py-1.5 text-xs rounded border border-slate-300 text-center font-bold"
+                      />
+                    </td>
+
+                    {/* Points per question */}
+                    <td className="p-2 text-center">
+                      <input
+                        type="number"
+                        step="0.05"
+                        min="0"
+                        value={cell.pointsPerQuestion}
+                        onChange={e =>
+                          handleUpdateRow(cell.id, 'pointsPerQuestion', Number(e.target.value))
+                        }
+                        className="w-14 px-1.5 py-1.5 text-xs rounded border border-slate-300 text-center font-medium"
+                      />
+                    </td>
+
+                    {/* Total points */}
+                    <td className="p-2 text-center">
+                      <span className="font-bold text-indigo-600 text-xs">
+                        {cell.totalPoints.toFixed(2)} đ
+                      </span>
+                    </td>
+
+                    {/* Delete Button */}
+                    <td className="p-2 text-center">
+                      <button
+                        onClick={() => handleRemoveRow(cell.id)}
+                        className="p-1 text-slate-400 hover:text-rose-600 rounded transition-colors"
+                        title="Xoá dòng này"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="bg-slate-100/90 font-bold text-slate-800 text-xs">
+                  <td colSpan={5} className="p-3 text-right">
+                    TỔNG CỘNG TOÀN MA TRẬN:
+                  </td>
+                  <td className="p-3 text-center text-sm">{totalQuestions} câu</td>
+                  <td className="p-3 text-center">-</td>
+                  <td
+                    className={`p-3 text-center text-sm ${
+                      isPointsBalanced ? 'text-emerald-700' : 'text-rose-700'
+                    }`}
+                  >
+                    {totalCalculatedPoints.toFixed(2)} đ
+                  </td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        )}
 
         {/* Footer Navigation Next Step */}
         <div className="pt-4 border-t border-slate-100 flex items-center justify-between">

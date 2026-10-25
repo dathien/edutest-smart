@@ -59,6 +59,9 @@ export const ExamRoomView: React.FC<ExamRoomViewProps> = ({
   const [violationWarning, setViolationWarning] = useState<string | null>(null);
   const [violationCount, setViolationCount] = useState(0);
 
+  // Mobile Question Palette Bottom Sheet
+  const [showMobileQuestionPalette, setShowMobileQuestionPalette] = useState(false);
+
   // Teacher monitor selected assignment
   const [selectedMonitorAssignment, setSelectedMonitorAssignment] = useState<ExamAssignment | null>(
     assignments[0] || null
@@ -529,25 +532,52 @@ export const ExamRoomView: React.FC<ExamRoomViewProps> = ({
     return (
       <div className="space-y-4">
         {/* Top Floating Exam Header Bar */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3 sticky top-[65px] z-20">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-extrabold text-sm text-slate-800 line-clamp-1">
+        <div className="bg-white p-3 sm:p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3 sticky top-[57px] sm:top-[65px] z-20">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="font-extrabold text-sm sm:text-base text-slate-800 line-clamp-3 md:line-clamp-2 leading-snug">
                 {activeExam.title}
-              </span>
-              <span className="text-[11px] font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">
+              </h1>
+              <span className="text-[10px] sm:text-[11px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded shrink-0">
                 Môn Toán {activeExam.grade}
               </span>
             </div>
-            <p className="text-[11px] text-slate-400 mt-0.5">
-              Thí sinh: <strong>{currentUser.fullName}</strong> · Tự động lưu lúc: <span className="text-slate-600 font-mono">{autosaveTime}</span>
-            </p>
+            
+            {/* Candidate / Preview identity */}
+            <div className="text-[11px] text-slate-500 mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5">
+              {currentUser.role === 'student' ? (
+                <>
+                  <span>Thí sinh: <strong className="text-slate-800">{currentUser.fullName}</strong></span>
+                  <span>Lớp: <strong className="text-slate-800">12A1</strong></span>
+                  <span>Thời gian làm bài: <strong className="text-slate-800">{activeExam.durationMinutes} phút</strong></span>
+                  <span className="text-slate-400">· Lưu lúc: <span className="text-slate-600 font-mono">{autosaveTime}</span></span>
+                </>
+              ) : (
+                <>
+                  <span className="text-purple-700 font-semibold bg-purple-50 px-2 py-0.5 rounded">
+                    Chế độ xem trước đề thi dành cho Giáo viên
+                  </span>
+                  <span>Người xem: <strong className="text-slate-800">{currentUser.fullName}</strong></span>
+                  <span>Thời gian thi: <strong className="text-slate-800">{activeExam.durationMinutes} phút</strong></span>
+                </>
+              )}
+            </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100">
+            {/* Mobile Question Palette Button [📋 Bảng câu hỏi] */}
+            <button
+              type="button"
+              onClick={() => setShowMobileQuestionPalette(true)}
+              className="lg:hidden px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-xl border border-indigo-200 transition-colors flex items-center gap-1.5"
+            >
+              <HelpCircle className="w-4 h-4" />
+              <span>Bảng câu ({currentQuestionIndex + 1}/{activeExam.questions.length})</span>
+            </button>
+
             {/* Timer */}
             <div
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl font-mono text-sm font-black border ${
+              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 rounded-xl font-mono text-xs sm:text-sm font-black border ${
                 timeLeftSeconds < 300
                   ? 'bg-rose-50 text-rose-600 border-rose-300 animate-pulse'
                   : 'bg-indigo-50 text-indigo-700 border-indigo-200'
@@ -563,9 +593,9 @@ export const ExamRoomView: React.FC<ExamRoomViewProps> = ({
                 setShowSubmitConfirm(true);
                 playSound('notification');
               }}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
+              className="px-3.5 sm:px-4 py-1.5 sm:py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center gap-1.5 shrink-0"
             >
-              <Send className="w-4 h-4" /> Nộp bài thi
+              <Send className="w-4 h-4" /> Nộp bài
             </button>
           </div>
         </div>
@@ -1056,8 +1086,8 @@ export const ExamRoomView: React.FC<ExamRoomViewProps> = ({
             )}
           </div>
 
-          {/* Right Palette Navigator (1 Col) */}
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+          {/* Desktop Palette Navigator (1 Col) - Hidden on mobile */}
+          <div className="hidden lg:block lg:col-span-1 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4 h-fit sticky top-[150px]">
             <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
               Bảng câu hỏi ({activeExam.questions.length})
             </h4>
@@ -1137,6 +1167,106 @@ export const ExamRoomView: React.FC<ExamRoomViewProps> = ({
             </button>
           </div>
         </div>
+
+        {/* Mobile Question Palette Bottom Sheet Drawer (lg:hidden) */}
+        {showMobileQuestionPalette && (
+          <div className="fixed inset-0 z-50 lg:hidden flex flex-col justify-end">
+            {/* Backdrop */}
+            <div 
+              className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs transition-opacity"
+              onClick={() => setShowMobileQuestionPalette(false)}
+            />
+
+            {/* Bottom Sheet Card */}
+            <div className="relative bg-white rounded-t-3xl max-h-[80vh] flex flex-col shadow-2xl z-10 border-t border-slate-200 animate-in slide-in-from-bottom duration-200">
+              {/* Header */}
+              <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-sm text-slate-800">
+                    Bảng câu hỏi ({activeExam.questions.length} câu)
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    Đã làm: <span className="font-bold text-indigo-700">{Object.keys(answers).length}</span> · Còn lại: <span className="font-bold text-rose-600">{unansweredCount}</span>
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowMobileQuestionPalette(false)}
+                  className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Legend */}
+              <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-100 flex flex-wrap items-center justify-around gap-2 text-[11px] text-slate-600">
+                <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-indigo-600 inline-block" /> Đã làm</span>
+                <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-slate-200 inline-block" /> Chưa làm</span>
+                <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-amber-400 inline-block" /> Đánh dấu</span>
+                <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded border-2 border-indigo-600 inline-block" /> Đang chọn</span>
+              </div>
+
+              {/* Grid of questions */}
+              <div className="p-4 overflow-y-auto max-h-[50vh]">
+                <div className="grid grid-cols-5 sm:grid-cols-6 gap-2">
+                  {activeExam.questions.map((q, idx) => {
+                    const isAnswered = !!answers[q.id];
+                    const isCurrent = idx === currentQuestionIndex;
+                    const isFlagged = flaggedQuestions.has(idx);
+
+                    return (
+                      <button
+                        key={q.id}
+                        type="button"
+                        onClick={() => {
+                          setCurrentQuestionIndex(idx);
+                          setShowMobileQuestionPalette(false);
+                          playSound('click');
+                        }}
+                        className={`h-11 rounded-xl text-xs font-bold transition-all relative flex items-center justify-center ${
+                          isCurrent
+                            ? 'ring-2 ring-indigo-600 ring-offset-2 font-black'
+                            : ''
+                        } ${
+                          isAnswered
+                            ? 'bg-indigo-600 text-white shadow-xs'
+                            : 'bg-slate-100 text-slate-700 active:bg-slate-200'
+                        }`}
+                      >
+                        {idx + 1}
+                        {isFlagged && (
+                          <span className="absolute -top-1 -right-1 w-3 h-3 bg-amber-400 rounded-full ring-1 ring-white" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Bottom Sheet Footer */}
+              <div className="p-3 border-t border-slate-100 flex items-center justify-between gap-3 bg-white">
+                <button
+                  type="button"
+                  onClick={() => setShowMobileQuestionPalette(false)}
+                  className="flex-1 py-2 text-xs font-semibold text-slate-700 bg-slate-100 rounded-xl"
+                >
+                  Đóng
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowMobileQuestionPalette(false);
+                    setShowSubmitConfirm(true);
+                    playSound('notification');
+                  }}
+                  className="flex-1 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-xs flex items-center justify-center gap-1.5"
+                >
+                  <Send className="w-3.5 h-3.5" /> Nộp bài
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Modal: Confirmation Before Submit (Section 13) */}
         {showSubmitConfirm && (

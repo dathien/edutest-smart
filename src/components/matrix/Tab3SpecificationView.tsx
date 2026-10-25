@@ -383,6 +383,13 @@ export const Tab3SpecificationView: React.FC<Tab3SpecificationViewProps> = ({
                 <strong>Kiểm tra tính khớp:</strong> Ma trận yêu cầu{' '}
                 <strong>{syncValidation.matrixTotalQuestions} câu</strong>. Bản đặc tả hiện có{' '}
                 <strong>{syncValidation.specTotalQuestions} câu</strong>.
+                {linkedMatrix?.cognitiveRatioConfig && (
+                  <span className="ml-2 text-indigo-700 font-medium">
+                    (Tỉ lệ nhận thức: {linkedMatrix.cognitiveRatioConfig.knowPct}% –{' '}
+                    {linkedMatrix.cognitiveRatioConfig.compPct}% –{' '}
+                    {linkedMatrix.cognitiveRatioConfig.appPct}%)
+                  </span>
+                )}
                 {!syncValidation.isMatched &&
                   ` (${
                     syncValidation.diff! > 0

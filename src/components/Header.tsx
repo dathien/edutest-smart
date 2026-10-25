@@ -18,9 +18,17 @@ interface HeaderProps {
   currentUser: User;
   onSelectUser: (user: User) => void;
   availableUsers: User[];
+  onToggleMobileMenu?: () => void;
+  isMobileMenuOpen?: boolean;
 }
 
-export const Header: React.FC<HeaderProps> = ({ currentUser, onSelectUser, availableUsers }) => {
+export const Header: React.FC<HeaderProps> = ({ 
+  currentUser, 
+  onSelectUser, 
+  availableUsers,
+  onToggleMobileMenu,
+  isMobileMenuOpen = false,
+}) => {
   const [soundActive, setSoundActive] = useState<boolean>(getSoundEnabled());
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
@@ -57,23 +65,43 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onSelectUser, avail
   const RoleIcon = roleInfo.icon;
 
   return (
-    <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 lg:px-6 py-2.5 transition-all shadow-xs">
-      <div className="flex items-center justify-between gap-4">
-        {/* Left: Brand & Tagline */}
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-blue-600 flex items-center justify-center text-white shadow-sm font-bold text-lg tracking-wider">
+    <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 px-3 sm:px-4 lg:px-6 h-14 sm:h-16 flex items-center transition-all shadow-xs">
+      <div className="flex items-center justify-between gap-2 sm:gap-4 w-full">
+        {/* Left: Mobile Menu Toggle [☰] + Brand & Tagline */}
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          {/* Mobile Drawer Toggle Button [☰] */}
+          {onToggleMobileMenu && (
+            <button
+              onClick={() => {
+                onToggleMobileMenu();
+                playSound('click');
+              }}
+              className="lg:hidden p-2 -ml-1 text-slate-700 hover:text-indigo-600 hover:bg-slate-100 rounded-xl transition-colors shrink-0"
+              aria-label="Mở menu chức năng"
+              title="Menu chức năng"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+          )}
+
+          {/* Logo badge */}
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-blue-600 flex items-center justify-center text-white shadow-xs font-black text-sm sm:text-base tracking-wider shrink-0">
             ES
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-purple-700 via-indigo-700 to-blue-700 bg-clip-text text-transparent">
+
+          {/* Title */}
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <span className="font-extrabold text-base sm:text-lg tracking-tight bg-gradient-to-r from-purple-700 via-indigo-700 to-blue-700 bg-clip-text text-transparent truncate">
                 EDUTEST SMART
               </span>
-              <span className="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200/60">
+              <span className="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded text-[10px] sm:text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200/60 shrink-0">
                 GDPT 2018
               </span>
             </div>
-            <p className="hidden md:block text-xs text-slate-500 font-medium">
+            <p className="hidden md:block text-xs text-slate-500 font-medium truncate">
               Hệ thống kiểm tra, đánh giá và quản lý lớp học thông minh
             </p>
           </div>

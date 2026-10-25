@@ -89,9 +89,9 @@ export const GeometryDiagram: React.FC<GeometryDiagramProps> = ({
     const getPt = (id: string) => pts.find((p) => p.id === id);
 
     return (
-      <div className={`my-3 inline-block bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs text-center ${className}`}>
+      <div className={`my-3 block w-full max-w-[440px] mx-auto bg-white p-3 sm:p-4 rounded-xl border border-slate-200 shadow-2xs text-center ${className}`}>
         {title && <div className="text-xs font-bold text-slate-700 mb-2 uppercase">{title}</div>}
-        <svg width={420} height={300} className="mx-auto select-none">
+        <svg viewBox="0 0 420 300" className="w-full max-w-[420px] h-auto mx-auto select-none">
           <defs>
             <marker
               id="geo-arrow-view"

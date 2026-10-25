@@ -6,6 +6,8 @@ import {
   Student,
   Question,
   MatrixDocument,
+  CognitiveRatioPreset,
+  CognitiveRatioConfig,
   Exam,
   ExamAssignment,
   ExamSubmission,
@@ -30,8 +32,67 @@ const STORAGE_KEYS = {
   AUDIT_LOGS: 'edutest_audit_logs',
   VIOLATIONS: 'edutest_violations',
   API_CONFIG: 'edutest_gas_api_config',
+  COGNITIVE_PRESETS: 'edutest_cognitive_presets',
 };
 
+// Initial Cognitive Ratio Presets (Reference, Department Approved, etc.)
+export const INITIAL_COGNITIVE_PRESETS: CognitiveRatioPreset[] = [
+  {
+    id: 'preset-a',
+    name: 'Mẫu A: 40% – 30% – 30%',
+    knowPct: 40,
+    compPct: 30,
+    appPct: 30,
+    type: 'reference',
+    description: 'Mẫu tham khảo phổ biến cho kiểm tra định kỳ (Giữa kỳ / Cuối kỳ)',
+  },
+  {
+    id: 'preset-b',
+    name: 'Mẫu B: 30% – 40% – 30%',
+    knowPct: 30,
+    compPct: 40,
+    appPct: 30,
+    type: 'reference',
+    description: 'Mẫu tham khảo chú trọng đánh giá mức độ thông hiểu và phân tích lập luận',
+  },
+  {
+    id: 'preset-c',
+    name: 'Mẫu C: 30% – 30% – 40%',
+    knowPct: 30,
+    compPct: 30,
+    appPct: 40,
+    type: 'reference',
+    description: 'Mẫu tham khảo tăng cường vận dụng thực tiễn, phân hóa học sinh khá giỏi',
+  },
+  {
+    id: 'preset-dept-math-12',
+    name: 'Mẫu Tổ Toán THPT (40% – 30% – 30%)',
+    knowPct: 40,
+    compPct: 30,
+    appPct: 30,
+    type: 'department_approved',
+    description: 'Đã được Tổ chuyên môn Toán phê duyệt áp dụng năm học 2025–2026',
+    authorName: 'Tổ Toán THPT',
+  },
+  {
+    id: 'preset-regular-test',
+    name: 'Mẫu thường xuyên (50% – 25% – 25%)',
+    knowPct: 50,
+    compPct: 25,
+    appPct: 25,
+    type: 'reference',
+    description: 'Mẫu tham khảo cho kiểm tra 15 phút hoặc củng cố sau bài học',
+  },
+  {
+    id: 'preset-advanced-203050',
+    name: 'Mẫu Đánh giá năng lực (20% – 30% – 50%)',
+    knowPct: 20,
+    compPct: 30,
+    appPct: 50,
+    type: 'reference',
+    description: 'Mẫu tham khảo bồi dưỡng học sinh giỏi hoặc thi thử đánh giá tư duy',
+  },
+];
 
 // Initial Mock Users
 const INITIAL_USERS: User[] = [
@@ -1354,6 +1415,29 @@ export class StorageService {
     this.setItem(STORAGE_KEYS.MATRICES, matrices);
     this.addLog('Nhân bản ma trận', `Bản sao: ${clone.title}`);
     return clone;
+  }
+
+  // Cognitive Ratio Presets
+  static getCognitivePresets(): CognitiveRatioPreset[] {
+    return this.getItem<CognitiveRatioPreset[]>(STORAGE_KEYS.COGNITIVE_PRESETS, INITIAL_COGNITIVE_PRESETS);
+  }
+
+  static saveCognitivePreset(preset: CognitiveRatioPreset): void {
+    const presets = this.getCognitivePresets();
+    const idx = presets.findIndex(p => p.id === preset.id);
+    if (idx >= 0) {
+      presets[idx] = preset;
+    } else {
+      presets.push(preset);
+    }
+    this.setItem(STORAGE_KEYS.COGNITIVE_PRESETS, presets);
+    this.addLog('Lưu mẫu tỉ lệ nhận thức', `Mẫu: ${preset.name} (${preset.knowPct}-${preset.compPct}-${preset.appPct})`);
+  }
+
+  static deleteCognitivePreset(id: string): void {
+    const presets = this.getCognitivePresets().filter(p => p.id !== id);
+    this.setItem(STORAGE_KEYS.COGNITIVE_PRESETS, presets);
+    this.addLog('Xoá mẫu tỉ lệ nhận thức', `ID: ${id}`);
   }
 
   // Specifications
