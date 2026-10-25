@@ -141,6 +141,7 @@ export default function App() {
                 matrices={matrices}
                 questions={questions}
                 classes={classes}
+                exams={exams}
                 onRefreshData={refreshAllData}
                 onNavigateExamRoom={() => setActiveTab('exam_room')}
               />

@@ -11,6 +11,8 @@ import {
   ExamSubmission,
   AuditLog,
   ViolationEvent,
+  SpecificationDocument,
+  SpecificationRow,
 } from '../types';
 
 const STORAGE_KEYS = {
@@ -21,6 +23,7 @@ const STORAGE_KEYS = {
   STUDENTS: 'edutest_students',
   QUESTIONS: 'edutest_questions',
   MATRICES: 'edutest_matrices',
+  SPECIFICATIONS: 'edutest_specifications',
   EXAMS: 'edutest_exams',
   ASSIGNMENTS: 'edutest_assignments',
   SUBMISSIONS: 'edutest_submissions',
@@ -28,6 +31,7 @@ const STORAGE_KEYS = {
   VIOLATIONS: 'edutest_violations',
   API_CONFIG: 'edutest_gas_api_config',
 };
+
 
 // Initial Mock Users
 const INITIAL_USERS: User[] = [
@@ -673,7 +677,197 @@ const INITIAL_MATRICES: MatrixDocument[] = [
   },
 ];
 
+// Initial Specifications
+const INITIAL_SPECIFICATIONS: SpecificationDocument[] = [
+  {
+    id: 'spec-12-gki-2526',
+    matrixId: 'matrix-12-gki-2526',
+    title: 'Bản đặc tả Đề kiểm tra Giữa học kỳ I - Toán 12 (2025-2026)',
+    subject: 'Toán học',
+    grade: 12,
+    academicYear: '2025-2026',
+    semester: 'GKI',
+    issuingUnit: 'THPT Võ Trường Toản – TP.HCM',
+    rows: [
+      {
+        id: 'spec-row-1',
+        matrixCellId: 'cell-1',
+        topic: '1. Ứng dụng đạo hàm để khảo sát và vẽ đồ thị hàm số',
+        knowledgeUnit: 'Tính đơn điệu, cực trị của hàm số',
+        learningOutcomes: 'Nhận biết được tính đồng biến, nghịch biến của hàm số trên một khoảng dựa vào dấu của đạo hàm cấp một hoặc bảng biến thiên/đồ thị. Nhận biết các điểm cực trị.',
+        cognitiveLevel: 'nhan_biet',
+        questionType: 'multiple_choice',
+        questionCount: 8,
+        questionCodes: 'Câu 1 đến Câu 8 (Phần I)',
+      },
+      {
+        id: 'spec-row-2',
+        matrixCellId: 'cell-2',
+        topic: '1. Ứng dụng đạo hàm để khảo sát và vẽ đồ thị hàm số',
+        knowledgeUnit: 'Giá trị lớn nhất, nhỏ nhất & Đường tiệm cận',
+        learningOutcomes: 'Tìm được GTLN, GTNN trên đoạn [a; b]. Xác định được đường tiệm cận đứng, tiệm cận ngang, tiệm cận xiên của đồ thị hàm số.',
+        cognitiveLevel: 'thong_hieu',
+        questionType: 'multiple_choice',
+        questionCount: 4,
+        questionCodes: 'Câu 9 đến Câu 12 (Phần I)',
+      },
+      {
+        id: 'spec-row-3',
+        matrixCellId: 'cell-3',
+        topic: '1. Ứng dụng đạo hàm để khảo sát và vẽ đồ thị hàm số',
+        knowledgeUnit: 'Khảo sát và phân tích tính chất hàm số bậc ba & phân thức',
+        learningOutcomes: 'Xét tính đúng sai của các khẳng định liên quan đến tiếp tuyến, cực trị, tiệm cận và khoảng biến thiên của hàm phân thức hữu tỉ.',
+        cognitiveLevel: 'thong_hieu',
+        questionType: 'true_false',
+        questionCount: 2,
+        questionCodes: 'Câu 1, Câu 2 (Phần II)',
+      },
+      {
+        id: 'spec-row-4',
+        matrixCellId: 'cell-4',
+        topic: '2. Toạ độ của vectơ trong không gian Oxyz',
+        knowledgeUnit: 'Toạ độ điểm, toạ độ vectơ, tích vô hướng',
+        learningOutcomes: 'Xác định toạ độ vectơ, tính độ dài vectơ, tích vô hướng của hai vectơ, góc giữa hai vectơ trong không gian Oxyz.',
+        cognitiveLevel: 'nhan_biet',
+        questionType: 'true_false',
+        questionCount: 1,
+        questionCodes: 'Câu 3 (Phần II)',
+      },
+      {
+        id: 'spec-row-5',
+        matrixCellId: 'cell-5',
+        topic: '1. Ứng dụng đạo hàm trong thực tiễn',
+        knowledgeUnit: 'Bài toán tối ưu hoá thực tế',
+        learningOutcomes: 'Vận dụng đạo hàm giải quyết các bài toán tối ưu chi phí sản xuất, doanh thu lợi nhuận lớn nhất, dung tích lớn nhất.',
+        cognitiveLevel: 'van_dung',
+        questionType: 'short_answer',
+        questionCount: 4,
+        questionCodes: 'Câu 1 đến Câu 4 (Phần III)',
+      },
+      {
+        id: 'spec-row-6',
+        matrixCellId: 'cell-6',
+        topic: '2. Toạ độ vectơ và bài toán không gian thực tế',
+        knowledgeUnit: 'Mô hình hoá toạ độ không gian thực tế',
+        learningOutcomes: 'Vận dụng hệ toạ độ Oxyz để gắn hệ trục vào các công trình kiến trúc, tính khoảng cách, góc, toạ độ điểm theo yêu cầu đề bài.',
+        cognitiveLevel: 'van_dung',
+        questionType: 'essay',
+        questionCount: 1,
+        questionCodes: 'Câu 1 (Phần IV - Tự luận)',
+      },
+    ],
+    createdAt: '2025-09-01',
+    updatedAt: '2025-09-05',
+  },
+  {
+    id: 'spec-11-gki-2526',
+    matrixId: 'matrix-11-gki-2526',
+    title: 'Bản đặc tả Đề kiểm tra Giữa học kỳ I - Toán 11 (2025-2026)',
+    subject: 'Toán học',
+    grade: 11,
+    academicYear: '2025-2026',
+    semester: 'GKI',
+    issuingUnit: 'THPT Trần Nhân Tông – Đắk Lắk',
+    rows: [
+      {
+        id: 'spec-11-row-1',
+        matrixCellId: 'cell-11-1',
+        topic: '1. Hàm số lượng giác và phương trình lượng giác',
+        knowledgeUnit: 'Giá trị lượng giác và phương trình lượng giác cơ bản',
+        learningOutcomes: 'Nhận biết các công thức biến đổi lượng giác, chu kỳ hàm số lượng giác và công thức nghiệm phương trình cơ bản.',
+        cognitiveLevel: 'nhan_biet',
+        questionType: 'multiple_choice',
+        questionCount: 12,
+        questionCodes: 'Câu 1 đến Câu 12 (Phần I)',
+      },
+      {
+        id: 'spec-11-row-2',
+        matrixCellId: 'cell-11-2',
+        topic: '2. Dãy số, Cấp số cộng và Cấp số nhân',
+        knowledgeUnit: 'Xác định số hạng tổng quát, công sai, công bội',
+        learningOutcomes: 'Hiểu và áp dụng các tính chất của cấp số cộng, cấp số nhân để tính tổng n số hạng đầu tiên.',
+        cognitiveLevel: 'thong_hieu',
+        questionType: 'true_false',
+        questionCount: 2,
+        questionCodes: 'Câu 1, Câu 2 (Phần II)',
+      },
+      {
+        id: 'spec-11-row-3',
+        matrixCellId: 'cell-11-3',
+        topic: '3. Quan hệ song song trong không gian',
+        knowledgeUnit: 'Đường thẳng và mặt phẳng song song',
+        learningOutcomes: 'Xác định giao tuyến, vị trí tương đối giữa đường thẳng và mặt phẳng, thiết diện song song.',
+        cognitiveLevel: 'thong_hieu',
+        questionType: 'true_false',
+        questionCount: 1,
+        questionCodes: 'Câu 3 (Phần II)',
+      },
+      {
+        id: 'spec-11-row-4',
+        matrixCellId: 'cell-11-4',
+        topic: '4. Ứng dụng lượng giác & cấp số',
+        knowledgeUnit: 'Bài toán thực tế lãi kép và dao động',
+        learningOutcomes: 'Vận dụng công thức cấp số và phương trình lượng giác giải bài toán thực tiễn.',
+        cognitiveLevel: 'van_dung',
+        questionType: 'short_answer',
+        questionCount: 4,
+        questionCodes: 'Câu 1 đến Câu 4 (Phần III)',
+      },
+    ],
+    createdAt: '2025-09-10',
+    updatedAt: '2025-09-15',
+  },
+  {
+    id: 'spec-10-gki-2526',
+    matrixId: 'matrix-10-gki-2526',
+    title: 'Bản đặc tả Đề kiểm tra Giữa học kỳ I - Toán 10 (2025-2026)',
+    subject: 'Toán học',
+    grade: 10,
+    academicYear: '2025-2026',
+    semester: 'GKI',
+    issuingUnit: 'THPT Bùi Thị Xuân – TP.HCM',
+    rows: [
+      {
+        id: 'spec-10-row-1',
+        matrixCellId: 'cell-10-1',
+        topic: '1. Mệnh đề và Tập hợp',
+        knowledgeUnit: 'Mệnh đề toán học, các phép toán tập hợp',
+        learningOutcomes: 'Nhận biết mệnh đề đúng/sai, phủ định mệnh đề, tìm giao, hợp, hiệu của hai tập hợp số.',
+        cognitiveLevel: 'nhan_biet',
+        questionType: 'multiple_choice',
+        questionCount: 12,
+        questionCodes: 'Câu 1 đến Câu 12 (Phần I)',
+      },
+      {
+        id: 'spec-10-row-2',
+        matrixCellId: 'cell-10-2',
+        topic: '2. Bất phương trình và Hệ bất phương trình bậc nhất hai ẩn',
+        knowledgeUnit: 'Biểu diễn miền nghiệm trên mặt phẳng toạ độ',
+        learningOutcomes: 'Xác định miền nghiệm và tìm giá trị lớn nhất/nhỏ nhất của biểu thức bậc nhất F(x, y).',
+        cognitiveLevel: 'thong_hieu',
+        questionType: 'true_false',
+        questionCount: 2,
+        questionCodes: 'Câu 1, Câu 2 (Phần II)',
+      },
+      {
+        id: 'spec-10-row-3',
+        matrixCellId: 'cell-10-3',
+        topic: '3. Hệ thức lượng trong tam giác',
+        knowledgeUnit: 'Định lí côsin, định lí sin và công thức diện tích',
+        learningOutcomes: 'Tính độ dài cạnh, góc, bán kính đường tròn ngoại tiếp, nội tiếp và diện tích tam giác.',
+        cognitiveLevel: 'thong_hieu',
+        questionType: 'true_false',
+        questionCount: 1,
+        questionCodes: 'Câu 3 (Phần II)',
+      },
+    ],
+    createdAt: '2025-09-12',
+    updatedAt: '2025-09-16',
+  },
+];
+
 // Initial Exams
+
 const INITIAL_EXAMS: Exam[] = [
   {
     id: 'exam-01',
@@ -1138,6 +1332,53 @@ export class StorageService {
     this.addLog('Lưu ma trận & đặc tả', `Ma trận: ${matrix.title}`);
   }
 
+  static deleteMatrix(id: string): void {
+    const matrices = this.getMatrices().filter(m => m.id !== id);
+    this.setItem(STORAGE_KEYS.MATRICES, matrices);
+    this.addLog('Xoá ma trận', `ID: ${id}`);
+  }
+
+  static duplicateMatrix(id: string): MatrixDocument | null {
+    const matrices = this.getMatrices();
+    const target = matrices.find(m => m.id === id);
+    if (!target) return null;
+    const clone: MatrixDocument = {
+      ...target,
+      id: `matrix-copy-${Date.now()}`,
+      title: `${target.title} (Bản sao)`,
+      createdAt: new Date().toISOString().substring(0, 10),
+      updatedAt: new Date().toISOString().substring(0, 10),
+      cells: target.cells.map(c => ({ ...c, id: `cell-${Date.now()}-${Math.random().toString(36).substring(2, 6)}` })),
+    };
+    matrices.unshift(clone);
+    this.setItem(STORAGE_KEYS.MATRICES, matrices);
+    this.addLog('Nhân bản ma trận', `Bản sao: ${clone.title}`);
+    return clone;
+  }
+
+  // Specifications
+  static getSpecifications(): SpecificationDocument[] {
+    return this.getItem<SpecificationDocument[]>(STORAGE_KEYS.SPECIFICATIONS, INITIAL_SPECIFICATIONS);
+  }
+
+  static saveSpecification(spec: SpecificationDocument): void {
+    const specs = this.getSpecifications();
+    const idx = specs.findIndex(s => s.id === spec.id);
+    if (idx >= 0) {
+      specs[idx] = spec;
+    } else {
+      specs.unshift(spec);
+    }
+    this.setItem(STORAGE_KEYS.SPECIFICATIONS, specs);
+    this.addLog('Lưu bản đặc tả', `Bản đặc tả: ${spec.title}`);
+  }
+
+  static deleteSpecification(id: string): void {
+    const specs = this.getSpecifications().filter(s => s.id !== id);
+    this.setItem(STORAGE_KEYS.SPECIFICATIONS, specs);
+    this.addLog('Xoá bản đặc tả', `ID: ${id}`);
+  }
+
   // Exams
   static getExams(): Exam[] {
     return this.getItem<Exam[]>(STORAGE_KEYS.EXAMS, INITIAL_EXAMS);
@@ -1154,6 +1395,33 @@ export class StorageService {
     this.setItem(STORAGE_KEYS.EXAMS, exams);
     this.addLog('Lưu đề kiểm tra', `Đề: ${exam.title} (Mã: ${exam.code})`);
   }
+
+  static deleteExam(id: string): void {
+    const exams = this.getExams().filter(e => e.id !== id);
+    this.setItem(STORAGE_KEYS.EXAMS, exams);
+    this.addLog('Xoá đề kiểm tra', `ID: ${id}`);
+  }
+
+  static duplicateExam(id: string): Exam | null {
+    const exams = this.getExams();
+    const target = exams.find(e => e.id === id);
+    if (!target) return null;
+    const randomSuffix = Math.floor(10 + Math.random() * 90);
+    const clone: Exam = {
+      ...target,
+      id: `exam-${Date.now()}`,
+      code: `${target.code}-COPY${randomSuffix}`,
+      title: `${target.title} (Bản sao)`,
+      status: 'draft',
+      version: 'v1.0 (Sao chép)',
+      createdAt: new Date().toISOString().substring(0, 10),
+    };
+    exams.unshift(clone);
+    this.setItem(STORAGE_KEYS.EXAMS, exams);
+    this.addLog('Nhân bản đề kiểm tra', `Bản sao: ${clone.title}`);
+    return clone;
+  }
+
 
   // Assignments
   static getAssignments(): ExamAssignment[] {
@@ -1236,6 +1504,7 @@ export class StorageService {
         students: this.getStudents(),
         questions: this.getQuestions(),
         matrices: this.getMatrices(),
+        specifications: this.getSpecifications(),
         exams: this.getExams(),
         assignments: this.getAssignments(),
         submissions: this.getSubmissions(),
@@ -1254,6 +1523,7 @@ export class StorageService {
         if (parsed.data.students) this.setItem(STORAGE_KEYS.STUDENTS, parsed.data.students);
         if (parsed.data.questions) this.setItem(STORAGE_KEYS.QUESTIONS, parsed.data.questions);
         if (parsed.data.matrices) this.setItem(STORAGE_KEYS.MATRICES, parsed.data.matrices);
+        if (parsed.data.specifications) this.setItem(STORAGE_KEYS.SPECIFICATIONS, parsed.data.specifications);
         if (parsed.data.exams) this.setItem(STORAGE_KEYS.EXAMS, parsed.data.exams);
         if (parsed.data.assignments) this.setItem(STORAGE_KEYS.ASSIGNMENTS, parsed.data.assignments);
         if (parsed.data.submissions) this.setItem(STORAGE_KEYS.SUBMISSIONS, parsed.data.submissions);

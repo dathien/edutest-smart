@@ -118,6 +118,9 @@ export interface MatrixDocument {
   durationMinutes: number;
   totalPoints: number;
   cells: MatrixCell[];
+  examType?: ExamType | string;
+  authorName?: string;
+  notes?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -144,6 +147,13 @@ export interface Exam {
   createdByName: string;
   createdAt: string;
   status: 'draft' | 'published' | 'archived';
+  version?: string; // e.g. 'v1.0', 'v1.1'
+  variants?: ExamVariant[];
+  auditStatus?: 'draft' | 'pending' | 'warning' | 'approved';
+  essayRubrics?: { [questionId: string]: EssayRubricStep[] };
+  examType?: ExamType | string;
+  schoolHeader?: string;
+  departmentHeader?: string;
 }
 
 export interface ExamAssignment {
@@ -211,3 +221,62 @@ export interface AuditLog {
   details: string;
   timestamp: string;
 }
+
+export type ExamType =
+  | 'kiem_tra_thuong_xuyen'
+  | 'giua_ky_1'
+  | 'cuoi_ky_1'
+  | 'giua_ky_2'
+  | 'cuoi_ky_2'
+  | 'on_tap'
+  | 'chu_de';
+
+export interface EssayRubricStep {
+  id: string;
+  stepNumber: number;
+  description: string;
+  points: number;
+}
+
+export interface ExamVariant {
+  code: string; // e.g. "101", "102", "103", "104"
+  questions: Question[];
+  answerKeyMap: { [questionId: string]: string };
+}
+
+export interface SpecificationRow {
+  id: string;
+  matrixCellId?: string;
+  topic: string; // Chủ đề / Mạch kiến thức
+  knowledgeUnit: string; // Đơn vị kiến thức / Kỹ năng
+  learningOutcomes: string; // Chuẩn kiến thức, kỹ năng cần kiểm tra (Yêu cầu cần đạt)
+  cognitiveLevel: CognitiveLevel;
+  questionType: QuestionType;
+  questionCount: number;
+  questionCodes?: string; // Ví dụ: "Câu 1, Câu 2"
+}
+
+export interface SpecificationDocument {
+  id: string;
+  matrixId: string;
+  title: string;
+  subject: string;
+  grade: number;
+  academicYear: string;
+  semester: string;
+  issuingUnit?: string;
+  rows: SpecificationRow[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AuditCriterionResult {
+  id: number;
+  title: string;
+  category: string;
+  status: 'pass' | 'warning' | 'fail';
+  description: string;
+  detail?: string;
+  required: boolean;
+}
+
