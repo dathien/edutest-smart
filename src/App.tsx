@@ -38,6 +38,7 @@ import {
   isAdminTeacher,
 } from './types';
 import { playSound } from './services/sound';
+import { signOutFirebase } from './services/googleAuth';
 
 export default function App() {
   // Safe initial route detection: default to '/' (Public Home Page)
@@ -184,6 +185,12 @@ export default function App() {
 
   // Handle Logout
   const handleLogout = async () => {
+    try {
+      await signOutFirebase();
+    } catch (e) {
+      console.warn('Firebase signout warning:', e);
+    }
+
     const currentToken = token || sessionStorage.getItem('edutest_token') || localStorage.getItem('edutest_token');
     if (currentToken) {
       try {

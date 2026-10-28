@@ -523,6 +523,198 @@ app.post('/api/auth/login', (req, res) => {
   });
 });
 
+// POST /api/auth/google-login
+app.post('/api/auth/google-login', (req, res) => {
+  const { uid, email } = req.body;
+  if (!uid || !email) {
+    res.status(400).json({ success: false, message: 'Thiếu thông tin nhận diện Google (UID, Email).' });
+    return;
+  }
+
+  const cleanEmail = email.trim().toLowerCase();
+
+  // Tìm kiếm theo UID trước hoặc email đã đăng ký qua Google
+  let matchedUser: ServerUser | null = USERS.get(uid) || USERS.get(`google-${uid}`) || null;
+
+  if (!matchedUser) {
+    for (const u of USERS.values()) {
+      if (u.email.toLowerCase() === cleanEmail) {
+        // Kiểm tra xem tài khoản này có phải tạo từ Google hay tài khoản hệ thống dùng mật khẩu
+        matchedUser = u;
+        break;
+      }
+    }
+  }
+
+  if (!matchedUser) {
+    res.json({
+      success: false,
+      notRegistered: true,
+      message: 'Tài khoản Google chưa được liên kết hồ sơ trên EduTest Smart. Vui lòng hoàn tất bước đăng ký.',
+    });
+    return;
+  }
+
+  if (matchedUser.status === 'locked') {
+    res.status(403).json({
+      success: false,
+      message: 'Tài khoản đang bị khóa. Vui lòng liên hệ Giáo viên Quản trị để mở khóa.',
+    });
+    return;
+  }
+
+  // Cấp Session Token
+  const token = `token-google-${Date.now()}-${Math.random().toString(36).substring(2, 12)}`;
+  SESSIONS.set(token, {
+    userId: matchedUser.id,
+    role: matchedUser.role,
+    permission: matchedUser.permission,
+    expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000,
+  });
+
+  recordAudit(
+    matchedUser.id,
+    matchedUser.fullName,
+    'ĐĂNG NHẬP GOOGLE',
+    `Đăng nhập Google thành công với vai trò ${matchedUser.role} (${matchedUser.permission || (matchedUser.role === 'TEACHER' ? 'Chờ duyệt' : 'Học sinh')})`
+  );
+
+  const { password: _, ...safeUser } = matchedUser;
+  res.json({
+    success: true,
+    token,
+    user: safeUser,
+  });
+});
+
+// POST /api/auth/google-register
+app.post('/api/auth/google-register', (req, res) => {
+  const {
+    uid,
+    email,
+    fullName,
+    role,
+    schoolName,
+    phone,
+    teachingSubjects,
+    studentCode,
+    gender,
+  } = req.body;
+
+  if (!uid || !email || !fullName || !role) {
+    res.status(400).json({ success: false, message: 'Vui lòng cung cấp đầy đủ thông tin bắt buộc.' });
+    return;
+  }
+
+  // BẢO VỆ PHÂN QUYỀN MÁY CHỦ: Không cho phép tự gán ADMIN
+  if (role !== 'TEACHER' && role !== 'STUDENT') {
+    res.status(400).json({ success: false, message: 'Vai trò đăng ký không hợp lệ.' });
+    return;
+  }
+
+  const cleanEmail = email.trim().toLowerCase();
+
+  // Kiểm tra trùng UID
+  if (USERS.has(uid) || USERS.has(`google-${uid}`)) {
+    res.status(400).json({ success: false, message: 'Tài khoản Google này đã có hồ sơ trên hệ thống. Vui lòng chọn Đăng nhập.' });
+    return;
+  }
+
+  // Xử lý email đã đăng ký bằng mật khẩu hệ thống trước đó
+  for (const existingUser of USERS.values()) {
+    if (existingUser.email.toLowerCase() === cleanEmail && existingUser.password) {
+      res.status(409).json({
+        success: false,
+        isEmailConflict: true,
+        message: 'Email này đã tồn tại trong hệ thống với mật khẩu riêng. Để bảo mật, vui lòng đăng nhập bằng Mật khẩu hoặc liên hệ Quản trị viên.',
+      });
+      return;
+    }
+  }
+
+  const username = cleanEmail.split('@')[0].replace(/[^a-zA-Z0-9._-]/g, '') || `user.${Date.now()}`;
+  let newServerUser: ServerUser;
+
+  if (role === 'TEACHER') {
+    const code = `GV${Math.floor(100 + Math.random() * 900)}`;
+    newServerUser = {
+      id: uid,
+      username: `gv.${username}`,
+      password: '', // Xác thực qua Google, không lưu mật khẩu
+      fullName: fullName.trim(),
+      salutation: fullName.startsWith('Cô') ? 'Cô' : 'Thầy',
+      email: cleanEmail,
+      role: 'TEACHER',
+      permission: 'STANDARD', // BẮT BUỘC STANDARD - Tuyệt đối không cấp ADMIN
+      teacherCode: code,
+      schoolName: (schoolName || 'THPT GDPT 2018').trim(),
+      phone: phone?.trim(),
+      teachingSubjects: Array.isArray(teachingSubjects) && teachingSubjects.length > 0 ? teachingSubjects : ['TOAN_10', 'TOAN_11', 'TOAN_12'],
+      assignedClassIds: [],
+      status: 'pending', // BẮT BUỘC PENDING - Giáo viên chờ duyệt
+      createdAt: new Date().toISOString().substring(0, 10),
+    };
+  } else {
+    // STUDENT
+    const sCode = (studentCode || `HS${Math.floor(1000 + Math.random() * 9000)}`).trim().toUpperCase();
+    newServerUser = {
+      id: uid,
+      username: `hs.${username}`,
+      password: '',
+      fullName: fullName.trim(),
+      email: cleanEmail,
+      role: 'STUDENT',
+      studentCode: sCode,
+      schoolName: (schoolName || 'THPT GDPT 2018').trim(),
+      assignedClassIds: [],
+      status: 'active', // BẮT BUỘC ACTIVE - Học sinh kích hoạt ngay
+      createdAt: new Date().toISOString().substring(0, 10),
+    };
+
+    // Đưa học sinh vào danh sách lớp/học sinh chung
+    const studentRecord: ServerStudent = {
+      id: `stu-${uid}`,
+      studentCode: sCode,
+      fullName: fullName.trim(),
+      gender: gender === 'Nữ' ? 'Nữ' : 'Nam',
+      classId: '',
+      className: 'Chưa phân lớp',
+      username: newServerUser.username,
+      status: 'active',
+      notes: 'Đăng ký trực tuyến qua tài khoản Google',
+    };
+    STUDENTS.set(studentRecord.id, studentRecord);
+  }
+
+  USERS.set(uid, newServerUser);
+
+  // Cấp Session Token
+  const token = `token-google-${Date.now()}-${Math.random().toString(36).substring(2, 12)}`;
+  SESSIONS.set(token, {
+    userId: newServerUser.id,
+    role: newServerUser.role,
+    permission: newServerUser.permission,
+    expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000,
+  });
+
+  recordAudit(
+    newServerUser.id,
+    newServerUser.fullName,
+    'ĐĂNG KÝ GOOGLE',
+    `Đăng ký tài khoản mới bằng Google (${newServerUser.role} - ${newServerUser.status === 'pending' ? 'Chờ duyệt' : 'Kích hoạt ngay'})`
+  );
+
+  const { password: _, ...safeUser } = newServerUser;
+  res.json({
+    success: true,
+    token,
+    user: safeUser,
+    message: role === 'TEACHER'
+      ? 'Đăng ký thành công! Tài khoản Giáo viên đang ở trạng thái Chờ duyệt (PENDING) bởi Giáo viên Quản trị.'
+      : 'Đăng ký thành công! Tài khoản Học sinh đã sẵn sàng hoạt động.',
+  });
+});
+
 // GET /api/auth/me
 app.get('/api/auth/me', (req, res) => {
   const user = getAuthUser(req);

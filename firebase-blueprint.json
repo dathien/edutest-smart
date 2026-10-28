@@ -1,0 +1,30 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "Hồ sơ người dùng cá nhân (Giáo viên hoặc Học sinh) được bảo vệ bằng UID của Firebase Auth",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Firebase Auth UID" },
+        "email": { "type": "string", "format": "email", "description": "Email người dùng được xác thực bởi Google" },
+        "fullName": { "type": "string", "maxLength": 100, "description": "Họ và tên người dùng" },
+        "role": { "type": "string", "enum": ["TEACHER", "STUDENT"], "description": "Vai trò chính thức" },
+        "permission": { "type": "string", "enum": ["STANDARD", "ADMIN"], "description": "Quyền giáo viên (STANDARD/ADMIN)" },
+        "status": { "type": "string", "enum": ["active", "pending", "locked"], "description": "Trạng thái tài khoản" },
+        "schoolName": { "type": "string", "maxLength": 150, "description": "Tên trường / đơn vị công tác" },
+        "phone": { "type": "string", "maxLength": 20, "description": "Số điện thoại liên hệ" },
+        "teacherCode": { "type": "string", "maxLength": 20, "description": "Mã giáo viên" },
+        "studentCode": { "type": "string", "maxLength": 20, "description": "Mã học sinh" },
+        "teachingSubjects": { "type": "array", "description": "Danh sách môn giảng dạy" },
+        "createdAt": { "type": "string", "description": "Thời điểm tạo hồ sơ" }
+      },
+      "required": ["id", "email", "fullName", "role", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Kho lưu trữ hồ sơ người dùng cá nhân được bảo vệ theo UID của Firebase Authentication"
+    }
+  }
+}

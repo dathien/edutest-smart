@@ -1,8 +1,59 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // EduTest Smart - Firebase Spark Technical Integration
-    // Tuân thủ yêu cầu: Chặn toàn bộ quyền đọc/ghi từ ứng dụng khách để bảo mật tuyệt đối
+    // EduTest Smart - Firebase Firestore Security Rules
+    // Bảo vệ đa tầng: Role-Based Access Control (RBAC) & Chống tự nâng quyền
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // 1. Hồ sơ người dùng tại /users/{userId}
+    match /users/{userId} {
+      // Chỉ chủ tài khoản được phép đọc hồ sơ cá nhân của chính mình
+      allow get: if isOwner(userId);
+
+      // Chặn hoàn toàn thao tác list từ ứng dụng khách để ngăn chặn cào quét dữ liệu PII
+      allow list: if false;
+
+      // Tạo hồ sơ khi hoàn tất đăng ký với tài khoản Google:
+      // - Chỉ chủ sở hữu UID được tạo tài liệu đúng với UID của mình
+      // - Email phải khớp với token email xác thực từ Google
+      // - TUYỆT ĐỐI NGĂN CHẶN tự gán quyền ADMIN
+      // - Giáo viên: BẮT BUỘC role == 'TEACHER', permission == 'STANDARD', status == 'pending'
+      // - Học sinh: BẮT BUỘC role == 'STUDENT', status == 'active', không được gán permission
+      allow create: if isOwner(userId)
+        && request.resource.data.id == userId
+        && request.resource.data.email == request.auth.token.email
+        && (
+          (
+            request.resource.data.role == 'TEACHER'
+            && request.resource.data.permission == 'STANDARD'
+            && request.resource.data.status == 'pending'
+          ) || (
+            request.resource.data.role == 'STUDENT'
+            && request.resource.data.status == 'active'
+            && (!('permission' in request.resource.data) || request.resource.data.permission == null)
+          )
+        );
+
+      // Cập nhật hồ sơ:
+      // Chủ tài khoản chỉ được phép cập nhật thông tin cá nhân (họ tên, số điện thoại, trường)
+      // KHÔNG ĐƯỢC PHÉP tự sửa đổi role, permission hoặc status
+      allow update: if isOwner(userId)
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.permission == resource.data.permission
+        && request.resource.data.status == resource.data.status;
+
+      // Không cho phép client xóa tài khoản
+      allow delete: if false;
+    }
+
+    // 2. Mặc định chặn toàn bộ quyền đọc/ghi ở tất cả các collections khác
     match /{document=**} {
       allow read, write: if false;
     }
