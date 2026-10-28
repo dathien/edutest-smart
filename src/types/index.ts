@@ -3,22 +3,61 @@
  * Designed for High School Math (Toán 10, 11, 12 - GDPT 2018) and extensible to all subjects.
  */
 
-export type Role = 'admin' | 'teacher' | 'student';
+export type UserRole = 'TEACHER' | 'STUDENT';
+export type TeacherPermission = 'ADMIN' | 'STANDARD';
+export type Role = 'admin' | 'teacher' | 'student' | UserRole;
 
 export interface User {
   id: string;
   username: string;
   fullName: string;
-  salutation?: string; // e.g. 'Thầy', 'Cô', 'Thầy giáo', 'Cô giáo'
+  teacherCode?: string; // e.g. "GV1201" for teachers
+  salutation?: string; // e.g. 'Thầy', 'Cô'
   email: string;
-  role: Role;
+  role: 'TEACHER' | 'STUDENT' | 'teacher' | 'student' | 'admin';
+  permission?: 'ADMIN' | 'STANDARD'; // Only for TEACHER: ADMIN or STANDARD
   avatarUrl?: string;
   status: 'active' | 'pending' | 'locked';
   schoolName: string;
   phone?: string;
   teachingSubjects?: string[]; // e.g. ['TOAN_10', 'TOAN_11', 'TOAN_12']
+  assignedClassIds?: string[]; // e.g. ['class-12a1', 'class-12a2']
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface TeacherProfile {
+  id: string;
+  userId: string;
+  teacherCode: string;
+  fullName: string;
+  username: string;
+  email: string;
+  phone?: string;
+  permission: TeacherPermission;
+  subjects: string[];
+  assignedClassIds: string[];
+  assignedClassNames: string[];
+  status: 'active' | 'locked' | 'pending';
   createdAt: string;
 }
+
+export const isTeacher = (u?: User | null): boolean => {
+  if (!u) return false;
+  const r = String(u.role).toUpperCase();
+  return r === 'TEACHER' || r === 'ADMIN';
+};
+
+export const isAdminTeacher = (u?: User | null): boolean => {
+  if (!u) return false;
+  if (!isTeacher(u)) return false;
+  return u.permission === 'ADMIN' || String(u.role).toUpperCase() === 'ADMIN';
+};
+
+export const isStudent = (u?: User | null): boolean => {
+  if (!u) return false;
+  return String(u.role).toUpperCase() === 'STUDENT';
+};
 
 export interface Subject {
   id: string;
@@ -278,17 +317,60 @@ export interface Exam {
   departmentHeader?: string;
 }
 
+export type AssignmentCategory = 'homework' | 'test' | 'exam'; // 1. Bài tập, 2. Bài kiểm tra, 3. Bài thi
+export type AssignmentTargetType = 'class' | 'group' | 'student';
+export type ProctorPolicy = 'warning_only' | 'warning_and_log' | 'lock_exam' | 'auto_submit';
+
 export interface ExamAssignment {
   id: string;
   examId: string;
   examTitle: string;
+  category?: AssignmentCategory; // 'homework' | 'test' | 'exam'
+  subject?: string;
+  teacherId?: string;
+  teacherName?: string;
   classIds: string[];
   classNames: string[];
+  targetType?: AssignmentTargetType;
+  targetStudentIds?: string[]; // Specific students if targetType === 'student' or 'group'
   startDate: string;
   endDate: string;
+  durationMinutes?: number;
+  maxAttempts?: number;
+  shuffleQuestions?: boolean;
+  shuffleAnswers?: boolean;
+  publishScoreImmediately?: boolean;
+  publishSolutionsImmediately?: boolean;
+  proctorPolicy?: ProctorPolicy;
   status: 'upcoming' | 'in_progress' | 'completed' | 'closed';
   totalAssigned: number;
   totalSubmitted: number;
+}
+
+export interface ActiveExamSession {
+  sessionId: string;
+  assignmentId: string;
+  examId: string;
+  studentId: string;
+  studentName: string;
+  activeTabId: string;
+  lastHeartbeat: number;
+  isDuplicateTabDetected: boolean;
+  tabSwitchCount: number;
+  totalAwaySeconds: number;
+  isLocked: boolean;
+  lockReason?: string;
+}
+
+export interface ExamEvent {
+  id: string;
+  sessionId?: string;
+  assignmentId: string;
+  studentId: string;
+  studentName: string;
+  type: 'tab_switch' | 'window_blur' | 'dual_tab_detected' | 'fullscreen_exit' | 'offline' | 'lock_enforced';
+  details: string;
+  timestamp: string;
 }
 
 export interface ViolationEvent {

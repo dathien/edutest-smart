@@ -16,6 +16,8 @@ import {
   HelpCircle,
   Volume2,
   X,
+  ShieldAlert,
+  Lock,
 } from 'lucide-react';
 import { Exam, ExamAssignment, ExamSubmission, Question, User, SubmissionAnswer, ViolationEvent } from '../../types';
 import { StorageService } from '../../services/storage';
@@ -28,6 +30,8 @@ interface ExamRoomViewProps {
   exams: Exam[];
   assignments: ExamAssignment[];
   submissions: ExamSubmission[];
+  initialAssignmentToTake?: ExamAssignment | null;
+  onExitExamRoom?: () => void;
   onRefreshData: () => void;
 }
 
@@ -36,15 +40,23 @@ export const ExamRoomView: React.FC<ExamRoomViewProps> = ({
   exams,
   assignments,
   submissions,
+  initialAssignmentToTake,
+  onExitExamRoom,
   onRefreshData,
 }) => {
   // If user is teacher/admin, show Proctoring Monitor + Student Test Simulator
   // If user is student, directly show Active Exams or Ongoing Exam
-  const isStudent = currentUser.role === 'student';
+  const isStudent = currentUser.role === 'student' || String(currentUser.role).toUpperCase() === 'STUDENT';
 
   const [activeExam, setActiveExam] = useState<Exam | null>(null);
   const [activeAssignment, setActiveAssignment] = useState<ExamAssignment | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+
+  // Tab & Anti-cheat tracking
+  const tabIdRef = useRef<string>(`tab-${Math.random().toString(36).substring(2, 9)}`);
+  const [isDuplicateTabBlocked, setIsDuplicateTabBlocked] = useState(false);
+  const [isExamLocked, setIsExamLocked] = useState(false);
+  const [lockReason, setLockReason] = useState<string>('');
 
   // Student test-taking answers
   const [answers, setAnswers] = useState<{ [qId: string]: SubmissionAnswer }>({});
@@ -84,12 +96,94 @@ export const ExamRoomView: React.FC<ExamRoomViewProps> = ({
     playSound('notification');
   };
 
+  // Automatically load initial assignment if provided
+  useEffect(() => {
+    if (initialAssignmentToTake) {
+      handleStartExam(initialAssignmentToTake);
+    }
+  }, [initialAssignmentToTake]);
+
+  // Dual-tab check on exam start and periodic heartbeat
+  useEffect(() => {
+    if (!activeExam || !activeAssignment || hasSubmitted) return;
+
+    const token = sessionStorage.getItem('edutest_token') || localStorage.getItem('edutest_token');
+
+    // Join session on server
+    fetch('/api/exam-session/join', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        assignmentId: activeAssignment.id,
+        examId: activeExam.id,
+        tabId: tabIdRef.current,
+      }),
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.isDuplicateTab) {
+          setIsDuplicateTabBlocked(true);
+          playSound('wrong');
+        }
+      })
+      .catch(() => {});
+
+    // BroadcastChannel for instant client-side dual-tab detection
+    let channel: BroadcastChannel | null = null;
+    try {
+      channel = new BroadcastChannel(`edutest_exam_tab_${activeAssignment.id}`);
+      channel.postMessage({ type: 'claim_tab', tabId: tabIdRef.current });
+      channel.onmessage = event => {
+        if (event.data?.type === 'claim_tab' && event.data.tabId !== tabIdRef.current) {
+          setIsDuplicateTabBlocked(true);
+          playSound('wrong');
+        }
+      };
+    } catch (e) {
+      console.warn(e);
+    }
+
+    // Heartbeat every 8s
+    const heartbeatInterval = setInterval(() => {
+      fetch('/api/exam-session/heartbeat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          assignmentId: activeAssignment.id,
+          tabId: tabIdRef.current,
+        }),
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.isDuplicateTab) {
+            setIsDuplicateTabBlocked(true);
+          }
+          if (data.isLocked) {
+            setIsExamLocked(true);
+            setLockReason(data.lockReason || 'Hệ thống đã khóa bài thi do vi phạm quy chế.');
+          }
+        })
+        .catch(() => {});
+    }, 8000);
+
+    return () => {
+      clearInterval(heartbeatInterval);
+      if (channel) channel.close();
+    };
+  }, [activeExam, activeAssignment, hasSubmitted]);
+
   // Timer countdown
   useEffect(() => {
-    if (!activeExam || hasSubmitted) return;
+    if (!activeExam || hasSubmitted || isDuplicateTabBlocked || isExamLocked) return;
 
     const interval = setInterval(() => {
-      setTimeLeftSeconds((prev) => {
+      setTimeLeftSeconds(prev => {
         if (prev <= 1) {
           clearInterval(interval);
           handleAutoSubmit();
@@ -103,19 +197,22 @@ export const ExamRoomView: React.FC<ExamRoomViewProps> = ({
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [activeExam, hasSubmitted]);
+  }, [activeExam, hasSubmitted, isDuplicateTabBlocked, isExamLocked]);
 
-  // Anti-cheat detection: tab switch & blur events (Section 13)
+  // Anti-cheat detection: tab switch & blur events with duration measurement
   useEffect(() => {
     if (!activeExam || hasSubmitted) return;
 
+    let awayStartTime = 0;
+
     const handleVisibilityChange = () => {
       if (document.hidden) {
+        awayStartTime = Date.now();
         const newCount = violationCount + 1;
         setViolationCount(newCount);
         playSound('wrong');
 
-        // Log violation event
+        // Log violation event locally
         const vEvent: ViolationEvent = {
           id: `vio-${Date.now()}`,
           studentId: currentUser.id,
@@ -126,14 +223,41 @@ export const ExamRoomView: React.FC<ExamRoomViewProps> = ({
           description: `Rời khỏi phòng thi (Chuyển tab / Mất tiêu điểm lần ${newCount})`,
         };
         StorageService.logViolation(vEvent);
+        setViolationWarning(
+          `Cảnh báo: Bạn vừa rời màn hình phòng thi! Lần vi phạm thứ ${newCount}. Sự kiện đã được ghi vào nhật ký giám sát.`
+        );
+      } else {
+        const awaySeconds = awayStartTime ? Math.round((Date.now() - awayStartTime) / 1000) : 1;
+        const token = sessionStorage.getItem('edutest_token') || localStorage.getItem('edutest_token');
 
-        setViolationWarning(`Cảnh báo: Bạn vừa rời màn hình phòng thi! Lần vi phạm thứ ${newCount}. Sự kiện đã được ghi vào nhật ký giám sát.`);
+        // Report to server with duration
+        fetch('/api/exam-session/event', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            assignmentId: activeAssignment?.id,
+            type: 'tab_switch',
+            details: `Học sinh quay lại sau ${awaySeconds} giây rời màn hình (Lần ${violationCount})`,
+            awaySeconds,
+          }),
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data.isLocked) {
+              setIsExamLocked(true);
+              setLockReason(data.lockReason || 'Hệ thống đã khóa bài thi do vi phạm quy chế chuyển tab.');
+            }
+          })
+          .catch(() => {});
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [activeExam, hasSubmitted, violationCount]);
+  }, [activeExam, activeAssignment, hasSubmitted, violationCount]);
 
   // Answer handler for Multiple Choice
   const handleAnswerMC = (qId: string, optionLetter: string) => {
@@ -531,6 +655,67 @@ export const ExamRoomView: React.FC<ExamRoomViewProps> = ({
   if (activeExam && !hasSubmitted) {
     return (
       <div className="space-y-4">
+        {/* Dual-tab detection blocking overlay */}
+        {isDuplicateTabBlocked && (
+          <div className="fixed inset-0 z-50 bg-slate-900/85 backdrop-blur-md flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-rose-200 text-center animate-in fade-in zoom-in-95">
+              <div className="w-16 h-16 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-4">
+                <ShieldAlert className="w-8 h-8" />
+              </div>
+              <h2 className="text-xl font-black text-slate-800 mb-2">
+                PHÁT HIỆN MỞ BÀI THI TRÊN 2 TAB ĐỒNG THỜI
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-6">
+                Hệ thống phát hiện bài thi này đang được mở đồng thời trên một tab hoặc cửa sổ khác.
+                Để bảo đảm tính công bằng và bảo vệ dữ liệu làm bài của bạn,{' '}
+                <strong className="text-rose-700">tab này đã bị khóa ghi dữ liệu</strong>.
+                <br /><br />
+                Vui lòng đóng tab này và tiếp tục làm bài trên tab ban đầu của bạn.
+              </p>
+              <button
+                onClick={() => {
+                  if (onExitExamRoom) {
+                    onExitExamRoom();
+                  } else {
+                    setActiveExam(null);
+                  }
+                }}
+                className="w-full py-3 px-4 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl text-sm transition-colors shadow-sm"
+              >
+                Quay lại danh sách bài kiểm tra
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Exam Locked by Proctoring Policy overlay */}
+        {isExamLocked && (
+          <div className="fixed inset-0 z-50 bg-slate-900/85 backdrop-blur-md flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-amber-200 text-center animate-in fade-in zoom-in-95">
+              <div className="w-16 h-16 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center mx-auto mb-4">
+                <Lock className="w-8 h-8" />
+              </div>
+              <h2 className="text-xl font-black text-slate-800 mb-2">
+                BÀI THI ĐÃ BỊ TẠM KHÓA
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-6">
+                {lockReason || 'Hệ thống đã tạm khóa bài thi do phát hiện vi phạm quy chế phòng thi.'}
+                <br /><br />
+                Vui lòng liên hệ Thầy/Cô giám thị hoặc giáo viên bộ môn để được mở khóa bài thi.
+              </p>
+              <button
+                onClick={() => {
+                  if (onExitExamRoom) onExitExamRoom();
+                  else setActiveExam(null);
+                }}
+                className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition-colors shadow-sm"
+              >
+                Về trang chủ học sinh
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Top Floating Exam Header Bar */}
         <div className="bg-white p-3 sm:p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3 sticky top-[57px] sm:top-[65px] z-20">
           <div className="min-w-0 flex-1">

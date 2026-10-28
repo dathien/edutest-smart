@@ -10,24 +10,30 @@ import {
   Settings,
   ChevronRight,
   Sparkles,
+  Compass,
 } from 'lucide-react';
 import { Role } from '../types';
 import { playSound } from '../services/sound';
+import { User, isAdminTeacher } from '../types';
+import { ShieldCheck } from 'lucide-react';
 
 export type MainTab = 
   | 'dashboard'
+  | 'teachers'
   | 'classes'
   | 'questions'
   | 'matrix'
   | 'exam_room'
   | 'grading'
   | 'games'
+  | 'math_lab'
   | 'settings';
 
 interface SidebarProps {
   activeTab: MainTab;
   onTabChange: (tab: MainTab) => void;
   userRole: Role;
+  currentUser?: User;
   isOpenMobile: boolean;
   onCloseMobile: () => void;
 }
@@ -45,10 +51,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   activeTab,
   onTabChange,
   userRole,
+  currentUser,
   isOpenMobile,
   onCloseMobile,
 }) => {
-  // Exact 8 required menus per specification
+  // Build menu list based on teacher admin permissions
   const menuItems: MenuItem[] = [
     {
       id: 'dashboard',
@@ -57,6 +64,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
       icon: LayoutDashboard,
       allowedRoles: ['admin', 'teacher', 'student'],
     },
+    ...(isAdminTeacher(currentUser)
+      ? [
+          {
+            id: 'teachers' as MainTab,
+            label: 'Quản lý giáo viên',
+            subLabel: 'Tài khoản & phân quyền',
+            icon: ShieldCheck,
+            badge: 'Admin',
+            allowedRoles: ['admin', 'teacher'] as Role[],
+          },
+        ]
+      : []),
     {
       id: 'classes',
       label: 'Quản lý lớp & học sinh',
@@ -102,6 +121,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
       subLabel: 'Vòng quay, Ô chữ, Đấu trường',
       icon: Gamepad2,
       badge: '4 Game',
+      allowedRoles: ['admin', 'teacher', 'student'],
+    },
+    {
+      id: 'math_lab',
+      label: 'Phòng Lab Toán học',
+      subLabel: 'Mô phỏng 2D/3D GDPT 2018',
+      icon: Compass,
+      badge: 'Mới 2D/3D',
       allowedRoles: ['admin', 'teacher', 'student'],
     },
     {

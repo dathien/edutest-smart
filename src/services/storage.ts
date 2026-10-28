@@ -102,11 +102,14 @@ const INITIAL_USERS: User[] = [
     fullName: 'Thầy Hồ Nguyễn Đa Thiện',
     salutation: 'Thầy',
     email: 'dathien.toan@edutest.edu.vn',
-    role: 'admin',
+    role: 'TEACHER',
+    permission: 'ADMIN',
+    teacherCode: 'GV001',
     status: 'active',
     schoolName: 'THPT Chuyên & GDPT 2018',
     phone: '0908123456',
     teachingSubjects: ['TOAN_10', 'TOAN_11', 'TOAN_12'],
+    assignedClassIds: ['class-12a1', 'class-11b1', 'class-10c1'],
     createdAt: '2025-08-15',
   },
   {
@@ -115,11 +118,14 @@ const INITIAL_USERS: User[] = [
     fullName: 'Cô Nguyễn Thị Lan',
     salutation: 'Cô',
     email: 'lan.nguyen@edutest.edu.vn',
-    role: 'teacher',
+    role: 'TEACHER',
+    permission: 'STANDARD',
+    teacherCode: 'GV002',
     status: 'active',
     schoolName: 'THPT Võ Trường Toản',
     phone: '0912345678',
     teachingSubjects: ['TOAN_12'],
+    assignedClassIds: ['class-12a2'],
     createdAt: '2025-09-01',
   },
   {
@@ -128,11 +134,14 @@ const INITIAL_USERS: User[] = [
     fullName: 'Thầy Trần Quốc Tuấn',
     salutation: 'Thầy',
     email: 'tuan.tran@edutest.edu.vn',
-    role: 'teacher',
+    role: 'TEACHER',
+    permission: 'STANDARD',
+    teacherCode: 'GV003',
     status: 'pending',
     schoolName: 'THPT Nguyễn Thị Minh Khai',
     phone: '0933999888',
     teachingSubjects: ['TOAN_11'],
+    assignedClassIds: [],
     createdAt: '2026-10-20',
   },
   {
@@ -140,7 +149,7 @@ const INITIAL_USERS: User[] = [
     username: 'hs.khoi',
     fullName: 'Lê Minh Khôi',
     email: 'khoi.lm@hocsinh.edutest.vn',
-    role: 'student',
+    role: 'STUDENT',
     status: 'active',
     schoolName: 'THPT Chuyên & GDPT 2018',
     createdAt: '2025-09-05',
@@ -1119,20 +1128,57 @@ export class StorageService {
     const users = this.getItem<User[]>(STORAGE_KEYS.USERS, INITIAL_USERS);
     let changed = false;
     const migrated = users.map(u => {
-      // Auto-migrate legacy name and ensure salutation
-      if (u.id === 'user-admin' && (u.fullName === 'GV. Hồ Nguyễn Đa Thiện' || !u.salutation)) {
+      let updatedUser = { ...u };
+      // Normalize roles to TEACHER / STUDENT
+      const rawRole = String(u.role).toUpperCase();
+      if (rawRole === 'ADMIN') {
+        updatedUser.role = 'TEACHER';
+        updatedUser.permission = 'ADMIN';
         changed = true;
-        return { ...u, fullName: 'Thầy Hồ Nguyễn Đa Thiện', salutation: 'Thầy' };
+      } else if (rawRole === 'TEACHER') {
+        updatedUser.role = 'TEACHER';
+        if (!updatedUser.permission) {
+          updatedUser.permission = updatedUser.id === 'user-admin' ? 'ADMIN' : 'STANDARD';
+          changed = true;
+        }
+      } else if (rawRole === 'STUDENT') {
+        updatedUser.role = 'STUDENT';
       }
-      if (u.id === 'user-teacher-1' && !u.salutation) {
-        changed = true;
-        return { ...u, salutation: 'Cô' };
+
+      // Auto-migrate legacy names and teacher codes
+      if (u.id === 'user-admin') {
+        if (u.fullName === 'GV. Hồ Nguyễn Đa Thiện' || !u.salutation || !u.teacherCode || !u.assignedClassIds) {
+          updatedUser = {
+            ...updatedUser,
+            fullName: 'Thầy Hồ Nguyễn Đa Thiện',
+            salutation: 'Thầy',
+            teacherCode: u.teacherCode || 'GV001',
+            assignedClassIds: u.assignedClassIds || ['class-12a1', 'class-11b1', 'class-10c1'],
+          };
+          changed = true;
+        }
+      } else if (u.id === 'user-teacher-1') {
+        if (!u.salutation || !u.teacherCode || !u.assignedClassIds) {
+          updatedUser = {
+            ...updatedUser,
+            salutation: 'Cô',
+            teacherCode: u.teacherCode || 'GV002',
+            assignedClassIds: u.assignedClassIds || ['class-12a2'],
+          };
+          changed = true;
+        }
+      } else if (u.id === 'user-teacher-pending') {
+        if (!u.salutation || !u.teacherCode) {
+          updatedUser = {
+            ...updatedUser,
+            salutation: 'Thầy',
+            teacherCode: u.teacherCode || 'GV003',
+            assignedClassIds: u.assignedClassIds || [],
+          };
+          changed = true;
+        }
       }
-      if (u.id === 'user-teacher-pending' && !u.salutation) {
-        changed = true;
-        return { ...u, salutation: 'Thầy' };
-      }
-      return u;
+      return updatedUser;
     });
     if (changed) {
       this.saveUsers(migrated);

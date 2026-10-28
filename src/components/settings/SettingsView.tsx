@@ -26,10 +26,12 @@ import {
   School,
   User as UserIcon,
   BookOpen,
+  Flame,
 } from 'lucide-react';
 import { User, AuditLog, Role } from '../../types';
 import { StorageService } from '../../services/storage';
 import { playSound } from '../../services/sound';
+import { getFirebaseStatus } from '../../services/firebase';
 
 interface SettingsViewProps {
   currentUser: User;
@@ -44,7 +46,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   logs,
   onRefreshData,
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'teachers' | 'profile' | 'gas_integration' | 'backup' | 'audit'>('teachers');
+  const [activeSubTab, setActiveSubTab] = useState<'teachers' | 'profile' | 'gas_integration' | 'backup' | 'audit' | 'firebase'>('teachers');
   const [copiedCode, setCopiedCode] = useState(false);
   const [actionMessage, setActionMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -426,6 +428,19 @@ function readSheetData(sheetName) {
             }`}
           >
             Nhật ký hệ thống
+          </button>
+
+          <button
+            onClick={() => {
+              setActiveSubTab('firebase');
+              playSound('click');
+            }}
+            className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
+              activeSubTab === 'firebase' ? 'bg-white text-amber-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Flame className="w-3.5 h-3.5 text-amber-500" />
+            <span>Firebase Spark</span>
           </button>
         </div>
       </div>
@@ -930,6 +945,216 @@ function readSheetData(sheetName) {
           </div>
         </div>
       )}
+
+      {/* ========================================================
+          SUB-TAB 6: FIREBASE SPARK (KẾT NỐI KỸ THUẬT)
+         ======================================================== */}
+      {activeSubTab === 'firebase' && (() => {
+        const fbStatus = getFirebaseStatus();
+        return (
+          <div className="space-y-6 animate-in fade-in">
+            {/* Overview Card */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center ring-1 ring-amber-500/20">
+                    <Flame className="w-6 h-6 text-amber-500" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-base font-extrabold text-slate-900">Tích Hợp Kỹ Thuật Firebase Spark</h3>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                        {fbStatus.plan}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Kết nối module Firebase Modular SDK, Firebase Authentication & Cloud Firestore (default)
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${
+                    fbStatus.isConfigured
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      : 'bg-amber-50 text-amber-700 border-amber-200'
+                  }`}>
+                    <span className={`w-2 h-2 rounded-full ${fbStatus.isConfigured ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+                    {fbStatus.isConfigured ? 'SDK Đã Kết Nối Sẵn Sàng' : 'Chờ Nhập Config từ Firebase Console'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Status Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/60">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">PROJECT ID</span>
+                  <span className="text-xs font-mono font-bold text-indigo-700 mt-1 block">{fbStatus.projectId}</span>
+                  <span className="text-[11px] text-slate-500 mt-0.5 block">Cố định từ Firebase Project</span>
+                </div>
+
+                <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/60">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">AUTH DOMAIN</span>
+                  <span className="text-xs font-mono font-bold text-slate-800 mt-1 block truncate" title={fbStatus.authDomain}>
+                    {fbStatus.authDomain}
+                  </span>
+                  <span className="text-[11px] text-slate-500 mt-0.5 block">Email / Password Auth</span>
+                </div>
+
+                <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/60">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">CLOUD FIRESTORE</span>
+                  <span className="text-xs font-mono font-bold text-slate-800 mt-1 block">{fbStatus.databaseId}</span>
+                  <span className="text-[11px] text-emerald-600 font-semibold mt-0.5 block">Cơ sở dữ liệu mặc định</span>
+                </div>
+
+                <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/60">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">QUY CHẾ BẢO MẬT</span>
+                  <span className="text-xs font-bold text-rose-700 mt-1 block">Chặn đọc/ghi client</span>
+                  <span className="text-[11px] text-slate-500 mt-0.5 block">read, write: if false</span>
+                </div>
+              </div>
+
+              {/* Non-destructive notice */}
+              <div className="p-4 bg-indigo-50/70 border border-indigo-200/70 rounded-xl text-xs text-indigo-950 space-y-1">
+                <div className="flex items-center gap-1.5 font-bold text-indigo-900">
+                  <ShieldCheck className="w-4 h-4 text-indigo-600" />
+                  <span>Tuân thủ nguyên tắc kết nối an toàn (Zero Breaking Changes):</span>
+                </div>
+                <ul className="list-disc list-inside space-y-0.5 text-[11px] text-indigo-900/80 pl-1">
+                  <li>Chỉ triển khai giai đoạn kết nối kỹ thuật Firebase SDK; chưa chuyển đổi dữ liệu và chưa thay thế hệ thống tài khoản hiện hành.</li>
+                  <li>Không đưa Service Account hoặc mã khóa bí mật quản trị vào mã nguồn frontend.</li>
+                  <li>Không tự động xóa hoặc ghi đè dữ liệu Google Sheets / Apps Script đang hoạt động.</li>
+                  <li>Giữ nguyên giao diện, slideshow, header, footer và toàn bộ chức năng thi, chấm điểm, ma trận.</li>
+                </ul>
+              </div>
+            </div>
+
+            {/* Environment Variables & Configuration Checklist */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+              <div className="pb-3 border-b border-slate-100 flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-extrabold text-slate-900">Danh Mục Biến Môi Trường (Vite / Vercel Environment Variables)</h4>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Các biến phải có tiền tố <code className="font-mono text-indigo-600 bg-indigo-50 px-1 py-0.5 rounded">VITE_</code> để Vite và Vercel nạp vào ứng dụng khách.
+                  </p>
+                </div>
+                <span className="text-xs font-mono font-semibold text-slate-400">.env / Vercel Project Settings</span>
+              </div>
+
+              <div className="divide-y divide-slate-100 text-xs">
+                {[
+                  {
+                    key: 'VITE_FIREBASE_PROJECT_ID',
+                    val: fbStatus.projectId,
+                    status: 'Có sẵn (Mặc định)',
+                    desc: 'Mã định danh dự án Firebase (edutest-smart)',
+                    required: true,
+                  },
+                  {
+                    key: 'VITE_FIREBASE_AUTH_DOMAIN',
+                    val: fbStatus.authDomain,
+                    status: 'Có sẵn (Mặc định)',
+                    desc: 'Tên miền xác thực Firebase Authentication (edutest-smart.firebaseapp.com)',
+                    required: true,
+                  },
+                  {
+                    key: 'VITE_FIREBASE_API_KEY',
+                    val: fbStatus.providedKeys.includes('VITE_FIREBASE_API_KEY') ? '••••••••••••••••••••' : '(Chưa cấu hình)',
+                    status: fbStatus.providedKeys.includes('VITE_FIREBASE_API_KEY') ? 'Đã nạp' : 'Cần lấy từ Firebase Console',
+                    desc: 'Khóa API Web của ứng dụng Firebase (Lấy từ Firebase Console > Project Settings > General)',
+                    required: true,
+                  },
+                  {
+                    key: 'VITE_FIREBASE_APP_ID',
+                    val: fbStatus.providedKeys.includes('VITE_FIREBASE_APP_ID') ? '••••••••••••••••••••' : '(Chưa cấu hình)',
+                    status: fbStatus.providedKeys.includes('VITE_FIREBASE_APP_ID') ? 'Đã nạp' : 'Cần lấy từ Firebase Console',
+                    desc: 'Mã định danh ứng dụng web Firebase (dạng 1:xxx:web:xxx)',
+                    required: true,
+                  },
+                  {
+                    key: 'VITE_FIREBASE_STORAGE_BUCKET',
+                    val: 'edutest-smart.appspot.com',
+                    status: 'Có sẵn (Mặc định)',
+                    desc: 'Tên miền lưu trữ Cloud Storage (mặc định edutest-smart.appspot.com)',
+                    required: false,
+                  },
+                  {
+                    key: 'VITE_FIREBASE_MESSAGING_SENDER_ID',
+                    val: fbStatus.providedKeys.includes('VITE_FIREBASE_MESSAGING_SENDER_ID') ? '••••••••' : '(Tùy chọn)',
+                    status: fbStatus.providedKeys.includes('VITE_FIREBASE_MESSAGING_SENDER_ID') ? 'Đã nạp' : 'Lấy từ Firebase Console',
+                    desc: 'Số dự án Firebase (Project Number)',
+                    required: false,
+                  },
+                ].map((item) => (
+                  <div key={item.key} className="py-3 flex flex-col md:flex-row md:items-center justify-between gap-2">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <code className="font-mono font-bold text-slate-800 text-xs bg-slate-100 px-1.5 py-0.5 rounded">
+                          {item.key}
+                        </code>
+                        {item.required ? (
+                          <span className="text-[10px] font-semibold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded">Bắt buộc</span>
+                        ) : (
+                          <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">Khuyên dùng</span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-slate-500">{item.desc}</p>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="font-mono text-slate-600 text-xs">{item.val}</span>
+                      <span className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
+                        item.status.includes('Đã nạp') || item.status.includes('Có sẵn')
+                          ? 'bg-emerald-50 text-emerald-700'
+                          : 'bg-amber-50 text-amber-700'
+                      }`}>
+                        {item.status}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Next Steps Guide */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+                <div className="flex items-center gap-2 text-slate-800 font-bold text-sm">
+                  <Flame className="w-4 h-4 text-amber-500" />
+                  <span>1. Thao tác trên Firebase Console</span>
+                </div>
+                <ol className="list-decimal list-inside text-xs text-slate-600 space-y-2 leading-relaxed">
+                  <li>Truy cập <strong className="text-slate-800">console.firebase.google.com</strong> và chọn dự án <code className="font-mono text-indigo-700">edutest-smart</code>.</li>
+                  <li>Vào <strong className="text-slate-800">Project settings</strong> (biểu tượng bánh răng) $\rightarrow$ thẻ <strong className="text-slate-800">General</strong>.</li>
+                  <li>Tại mục <strong className="text-slate-800">Your apps</strong>, nếu chưa có ứng dụng Web, bấm <strong className="text-slate-800">Add app</strong> $\rightarrow$ chọn biểu tượng Web <code className="font-mono text-xs">&lt;/&gt;</code> để đăng ký.</li>
+                  <li>Sao chép các giá trị <code className="font-mono text-slate-800">apiKey</code>, <code className="font-mono text-slate-800">appId</code>, <code className="font-mono text-slate-800">messagingSenderId</code>.</li>
+                </ol>
+              </div>
+
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+                <div className="flex items-center gap-2 text-slate-800 font-bold text-sm">
+                  <Server className="w-4 h-4 text-indigo-600" />
+                  <span>2. Thao tác trên Vercel Dashboard</span>
+                </div>
+                <ol className="list-decimal list-inside text-xs text-slate-600 space-y-2 leading-relaxed">
+                  <li>Truy cập <strong className="text-slate-800">vercel.com</strong> và chọn dự án <code className="font-mono text-indigo-700">edutest-smart</code>.</li>
+                  <li>Vào mục <strong className="text-slate-800">Settings</strong> $\rightarrow$ chọn thẻ <strong className="text-slate-800">Environment Variables</strong>.</li>
+                  <li>Thêm các biến:
+                    <ul className="list-disc list-inside pl-3 pt-1 text-[11px] font-mono text-slate-700 space-y-0.5">
+                      <li>VITE_FIREBASE_PROJECT_ID = edutest-smart</li>
+                      <li>VITE_FIREBASE_AUTH_DOMAIN = edutest-smart.firebaseapp.com</li>
+                      <li>VITE_FIREBASE_API_KEY = (giá trị từ Console)</li>
+                      <li>VITE_FIREBASE_APP_ID = (giá trị từ Console)</li>
+                      <li>VITE_FIREBASE_STORAGE_BUCKET = edutest-smart.appspot.com</li>
+                    </ul>
+                  </li>
+                  <li>Redeploy để áp dụng cấu hình biến môi trường trên Vercel.</li>
+                </ol>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ========================================================
           MODAL 1: THÊM GIÁO VIÊN MỚI (Yêu cầu 2)

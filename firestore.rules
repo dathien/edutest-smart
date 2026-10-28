@@ -1,0 +1,10 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // EduTest Smart - Firebase Spark Technical Integration
+    // Tuân thủ yêu cầu: Chặn toàn bộ quyền đọc/ghi từ ứng dụng khách để bảo mật tuyệt đối
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -79,3 +79,27 @@ button, input, select, textarea {
 .animate-fadeIn {
   animation: fadeInSlide 0.45s ease-out forwards;
 }
+
+@keyframes progress6s {
+  0% {
+    width: 0%;
+  }
+  100% {
+    width: 100%;
+  }
+}
+
+.animate-progress-6s {
+  animation: progress6s 6s linear forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
