@@ -19,6 +19,7 @@ import {
   ShieldAlert,
   Home,
   Compass,
+  Link as LinkIcon,
 } from 'lucide-react';
 import {
   User,
@@ -28,6 +29,7 @@ import {
   AssignmentCategory,
 } from '../../types';
 import { playSound, getSoundEnabled, setSoundEnabled } from '../../services/sound';
+import { UserProfileModal } from '../auth/UserProfileModal';
 
 interface StudentPortalViewProps {
   currentUser: User;
@@ -39,6 +41,7 @@ interface StudentPortalViewProps {
   onLogout: () => void;
   onGoHome?: () => void;
   onOpenMathLab?: () => void;
+  onUserUpdated?: (user: User) => void;
 }
 
 export const StudentPortalView: React.FC<StudentPortalViewProps> = ({
@@ -51,11 +54,13 @@ export const StudentPortalView: React.FC<StudentPortalViewProps> = ({
   onLogout,
   onGoHome,
   onOpenMathLab,
+  onUserUpdated,
 }) => {
   // 4 Core Student Sections
   type StudentTab = 'homework' | 'test' | 'exam' | 'results';
   const [activeTab, setActiveTab] = useState<StudentTab>('homework');
   const [soundActive, setSoundActive] = useState<boolean>(getSoundEnabled());
+  const [showProfileModal, setShowProfileModal] = useState(false);
 
   const toggleSound = () => {
     const next = !soundActive;
@@ -185,6 +190,18 @@ export const StudentPortalView: React.FC<StudentPortalViewProps> = ({
             <button
               onClick={() => {
                 playSound('click');
+                setShowProfileModal(true);
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition-colors cursor-pointer"
+              title="Xem hồ sơ và phương thức đăng nhập"
+            >
+              <LinkIcon className="w-4 h-4 text-indigo-600" />
+              <span className="hidden sm:inline">Hồ sơ & Đăng nhập</span>
+            </button>
+
+            <button
+              onClick={() => {
+                playSound('click');
                 onLogout();
               }}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold text-rose-600 hover:bg-rose-50 border border-rose-200 transition-colors cursor-pointer"
@@ -195,6 +212,16 @@ export const StudentPortalView: React.FC<StudentPortalViewProps> = ({
           </div>
         </div>
       </header>
+
+      {/* Modal Hồ sơ & Liên kết tài khoản cho học sinh */}
+      <UserProfileModal
+        currentUser={currentUser}
+        isOpen={showProfileModal}
+        onClose={() => setShowProfileModal(false)}
+        onUserUpdated={(updatedUser) => {
+          onUserUpdated?.(updatedUser);
+        }}
+      />
 
       {/* Main Student Portal Content */}
       <main className="flex-1 max-w-6xl mx-auto w-full p-4 sm:p-6 lg:p-8 space-y-6">

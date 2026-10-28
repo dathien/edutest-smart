@@ -22,6 +22,9 @@ export interface User {
   phone?: string;
   teachingSubjects?: string[]; // e.g. ['TOAN_10', 'TOAN_11', 'TOAN_12']
   assignedClassIds?: string[]; // e.g. ['class-12a1', 'class-12a2']
+  linkedProviders?: string[]; // e.g. ['password', 'google.com']
+  googleEmail?: string;
+  googleUid?: string;
   createdAt: string;
   updatedAt?: string;
 }

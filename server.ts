@@ -33,6 +33,9 @@ interface ServerUser {
   assignedClassIds?: string[];
   status: 'active' | 'locked' | 'pending';
   createdAt: string;
+  linkedProviders?: string[];
+  googleEmail?: string;
+  googleUid?: string;
 }
 
 interface ServerClass {
@@ -533,20 +536,38 @@ app.post('/api/auth/google-login', (req, res) => {
 
   const cleanEmail = email.trim().toLowerCase();
 
-  // Tìm kiếm theo UID trước hoặc email đã đăng ký qua Google
+  // 1. Tìm kiếm chính xác theo UID hoặc googleUid đã liên kết an toàn
   let matchedUser: ServerUser | null = USERS.get(uid) || USERS.get(`google-${uid}`) || null;
 
   if (!matchedUser) {
     for (const u of USERS.values()) {
-      if (u.email.toLowerCase() === cleanEmail) {
-        // Kiểm tra xem tài khoản này có phải tạo từ Google hay tài khoản hệ thống dùng mật khẩu
+      if (u.id === uid || u.googleUid === uid) {
         matchedUser = u;
         break;
       }
     }
   }
 
+  // 2. Nếu chưa liên kết UID, kiểm tra xem có tài khoản nào trùng Email nhưng chưa liên kết không
   if (!matchedUser) {
+    let emailCollisionUser: ServerUser | null = null;
+    for (const u of USERS.values()) {
+      if (u.email.toLowerCase() === cleanEmail) {
+        emailCollisionUser = u;
+        break;
+      }
+    }
+
+    if (emailCollisionUser) {
+      // TUÂN THỦ NGHIÊM NGẶT YÊU CẦU: Không tự động liên kết hai tài khoản chỉ vì có cùng email!
+      res.json({
+        success: false,
+        requiresManualLink: true,
+        message: 'Email này đã tồn tại trong hệ thống dưới phương thức Email/Mật khẩu. Để bảo mật tài khoản, EduTest Smart không tự động liên kết tài khoản chỉ vì trùng email. Vui lòng đăng nhập bằng Email/Mật khẩu trước, sau đó vào Hồ sơ cá nhân để chọn "Liên kết tài khoản Google".',
+      });
+      return;
+    }
+
     res.json({
       success: false,
       notRegistered: true,
@@ -751,6 +772,110 @@ app.put('/api/auth/profile', requireAuth, (req, res) => {
 
   const { password: _, ...safeUser } = currentUser;
   res.json({ success: true, user: safeUser });
+});
+
+// POST /api/auth/link-google (Liên kết Google với tài khoản hiện tại)
+app.post('/api/auth/link-google', requireAuth, (req, res) => {
+  const currentUser = (req as any).user as ServerUser;
+  const { googleUid, googleEmail } = req.body;
+
+  if (!googleUid || !googleEmail) {
+    res.status(400).json({ success: false, message: 'Thiếu thông tin tài khoản Google để liên kết.' });
+    return;
+  }
+
+  const cleanGoogleEmail = googleEmail.trim().toLowerCase();
+
+  // 1. Kiểm tra xem Google UID hoặc Google Email này đã thuộc về tài khoản khác chưa!
+  // YÊU CẦU: "Nếu Google đã thuộc về UID khác, không tự gộp hoặc xóa tài khoản; thông báo rõ và yêu cầu xử lý an toàn."
+  for (const u of USERS.values()) {
+    if (u.id !== currentUser.id) {
+      if (u.id === googleUid || u.googleUid === googleUid) {
+        res.status(409).json({
+          success: false,
+          isAlreadyLinkedOther: true,
+          message: `Tài khoản Google (${cleanGoogleEmail}) đã được liên kết với một tài khoản người dùng khác trong hệ thống. Để bảo vệ dữ liệu, hệ thống không tự động gộp hoặc xóa tài khoản. Vui lòng chọn tài khoản Google khác.`,
+        });
+        return;
+      }
+    }
+  }
+
+  // 2. Bảo toàn tuyệt đối: Không thay đổi vai trò (role), quyền (permission) hoặc trạng thái (status)!
+  // YÊU CẦU: "Sau khi liên kết thành công, giữ nguyên UID, hồ sơ Firestore, vai trò và dữ liệu liên quan."
+  // "Không cho phép thay đổi vai trò TEACHER/STUDENT hoặc tự cấp ADMIN thông qua liên kết tài khoản."
+  const originalRole = currentUser.role;
+  const originalPermission = currentUser.permission;
+  const originalStatus = currentUser.status;
+  const originalId = currentUser.id;
+
+  currentUser.googleUid = googleUid;
+  currentUser.googleEmail = cleanGoogleEmail;
+
+  if (!currentUser.linkedProviders) {
+    currentUser.linkedProviders = ['password'];
+  }
+  if (!currentUser.linkedProviders.includes('google.com')) {
+    currentUser.linkedProviders.push('google.com');
+  }
+
+  // Đảm bảo không bị thay đổi vai trò
+  currentUser.role = originalRole;
+  currentUser.permission = originalPermission;
+  currentUser.status = originalStatus;
+  currentUser.id = originalId;
+
+  USERS.set(currentUser.id, currentUser);
+
+  recordAudit(
+    currentUser.id,
+    currentUser.fullName,
+    'LIÊN KẾT GOOGLE',
+    `Liên kết thành công tài khoản Google (${cleanGoogleEmail}) vào tài khoản hiện tại. Giữ nguyên 100% UID (${currentUser.id}) và vai trò ${currentUser.role}.`
+  );
+
+  const { password: _, ...safeUser } = currentUser;
+  res.json({
+    success: true,
+    user: safeUser,
+    message: 'Liên kết tài khoản Google thành công! Từ bây giờ bạn có thể đăng nhập bằng cả Email/Mật khẩu hoặc Google.',
+  });
+});
+
+// POST /api/auth/unlink-google (Hủy liên kết Google an toàn)
+app.post('/api/auth/unlink-google', requireAuth, (req, res) => {
+  const currentUser = (req as any).user as ServerUser;
+
+  // Bảo vệ: Chỉ cho phép hủy liên kết Google nếu tài khoản có mật khẩu dự phòng
+  if (!currentUser.password) {
+    res.status(400).json({
+      success: false,
+      message: 'Không thể hủy liên kết Google vì tài khoản này chưa thiết lập mật khẩu đăng nhập dự phòng.',
+    });
+    return;
+  }
+
+  currentUser.googleUid = undefined;
+  currentUser.googleEmail = undefined;
+  if (currentUser.linkedProviders) {
+    currentUser.linkedProviders = currentUser.linkedProviders.filter((p) => p !== 'google.com');
+  }
+
+  USERS.set(currentUser.id, currentUser);
+
+  recordAudit(
+    currentUser.id,
+    currentUser.fullName,
+    'HỦY LIÊN KẾT GOOGLE',
+    'Hủy liên kết tài khoản Google khỏi hồ sơ người dùng.'
+  );
+
+  const { password: _, ...safeUser } = currentUser;
+  res.json({
+    success: true,
+    user: safeUser,
+    message: 'Đã hủy liên kết tài khoản Google. Bạn vẫn có thể đăng nhập bình thường bằng Email/Mật khẩu.',
+  });
 });
 
 // POST /api/auth/change-password

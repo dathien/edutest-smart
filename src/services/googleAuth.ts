@@ -3,6 +3,9 @@ import {
   signInWithPopup,
   signInWithRedirect,
   getRedirectResult,
+  linkWithPopup,
+  linkWithRedirect,
+  unlink,
   signOut as fbSignOut,
   User as FirebaseUser,
   AuthError,
@@ -105,6 +108,30 @@ export const formatGoogleAuthError = (error: unknown): { code: string; message: 
       code,
       message: 'Không thể kết nối đến máy chủ xác thực của Google hoặc Firebase.',
       recommendation: 'Vui lòng kiểm tra lại kết nối mạng Internet hoặc tường lửa và thử lại.',
+    };
+  }
+
+  if (code === 'auth/credential-already-in-use') {
+    return {
+      code,
+      message: 'Tài khoản Google này hiện đã được liên kết với một tài khoản người dùng khác trong hệ thống.',
+      recommendation: 'Để bảo vệ an toàn dữ liệu, hệ thống không tự động gộp hoặc xóa tài khoản. Vui lòng sử dụng tài khoản Google khác hoặc đăng nhập bằng tài khoản Google đó.',
+    };
+  }
+
+  if (code === 'auth/provider-already-linked') {
+    return {
+      code,
+      message: 'Tài khoản của bạn đã được liên kết với Google từ trước.',
+      recommendation: 'Bạn có thể sử dụng phương thức Đăng nhập bằng Google ngay lập tức.',
+    };
+  }
+
+  if (code === 'auth/requires-recent-login') {
+    return {
+      code,
+      message: 'Phiên đăng nhập đã quá thời hạn an toàn yêu cầu cho tác vụ nhạy cảm này.',
+      recommendation: 'Vui lòng đăng xuất và đăng nhập lại bằng Mật khẩu trước khi liên kết tài khoản Google.',
     };
   }
 
@@ -414,5 +441,171 @@ export const signOutFirebase = async (): Promise<void> => {
     } catch (err) {
       console.warn('[GoogleAuth] Lỗi khi đăng xuất Firebase:', err);
     }
+  }
+};
+
+/**
+ * Liên kết tài khoản Google với tài khoản hiện đang đăng nhập:
+ * - Bảo toàn 100% UID, vai trò và dữ liệu
+ * - Xử lý trường hợp Google đã thuộc về UID khác (auth/credential-already-in-use)
+ * - Ngăn chặn tự gộp tài khoản chỉ vì trùng email
+ */
+export const linkGoogleToCurrentAccount = async (
+  sessionToken: string,
+  currentUser: User
+): Promise<{
+  success: boolean;
+  user?: User;
+  message?: string;
+  isAlreadyLinkedOther?: boolean;
+}> => {
+  const auth = getFirebaseAuth();
+  let googleUid = '';
+  let googleEmail = '';
+  let googleDisplayName = '';
+
+  try {
+    if (auth && auth.currentUser) {
+      // Sử dụng linkWithPopup của Firebase Auth SDK
+      const credential = await linkWithPopup(auth.currentUser, googleAuthProvider);
+      googleUid = credential.user.uid;
+      googleEmail = credential.user.email || '';
+      googleDisplayName = credential.user.displayName || '';
+    } else {
+      // Trường hợp đăng nhập ban đầu bằng Email/Mật khẩu hệ thống
+      const googleUser = await signInWithGooglePopup();
+      googleUid = googleUser.uid;
+      googleEmail = googleUser.email || '';
+      googleDisplayName = googleUser.displayName || '';
+    }
+
+    if (!googleUid || !googleEmail) {
+      return {
+        success: false,
+        message: 'Không nhận được thông tin xác thực Google.',
+      };
+    }
+
+    // Gửi yêu cầu liên kết tới máy chủ authoritative
+    const res = await fetch('/api/auth/link-google', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${sessionToken}`,
+      },
+      body: JSON.stringify({
+        googleUid,
+        googleEmail,
+        googleDisplayName,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (res.status === 409) {
+      return {
+        success: false,
+        isAlreadyLinkedOther: true,
+        message:
+          data.message ||
+          `Tài khoản Google (${googleEmail}) đã được liên kết với một tài khoản khác trong hệ thống. Để bảo vệ an toàn dữ liệu, hệ thống không tự động gộp hoặc xóa tài khoản. Vui lòng chọn tài khoản Google khác.`,
+      };
+    }
+
+    if (!res.ok || !data.success) {
+      return {
+        success: false,
+        message: data.message || 'Không thể liên kết tài khoản Google.',
+      };
+    }
+
+    // Cập nhật tài liệu Firestore users/{uid} nếu có quyền ghi
+    const db = getFirebaseDb();
+    if (db && currentUser.id) {
+      try {
+        const userRef = doc(db, 'users', currentUser.id);
+        const existingDoc = await getDoc(userRef);
+        if (existingDoc.exists()) {
+          const docData = existingDoc.data();
+          const providers = Array.from(new Set([...(docData.linkedProviders || ['password']), 'google.com']));
+          await setDoc(
+            userRef,
+            {
+              ...docData,
+              linkedProviders: providers,
+              googleEmail,
+              updatedAt: serverTimestamp(),
+            },
+            { merge: true }
+          );
+        }
+      } catch (e) {
+        console.warn('[Firestore] Cập nhật liên kết provider vào Firestore chưa hoàn tất:', e);
+      }
+    }
+
+    return {
+      success: true,
+      user: data.user,
+      message: data.message,
+    };
+  } catch (error: unknown) {
+    const parsed = formatGoogleAuthError(error);
+    return {
+      success: false,
+      message: parsed.message,
+      isAlreadyLinkedOther: parsed.code === 'auth/credential-already-in-use',
+    };
+  }
+};
+
+/**
+ * Hủy liên kết tài khoản Google khỏi hồ sơ hiện tại
+ */
+export const unlinkGoogleFromCurrentAccount = async (
+  sessionToken: string
+): Promise<{
+  success: boolean;
+  user?: User;
+  message?: string;
+}> => {
+  try {
+    const auth = getFirebaseAuth();
+    if (auth && auth.currentUser) {
+      try {
+        await unlink(auth.currentUser, 'google.com');
+      } catch (e) {
+        console.warn('[Firebase Auth] Unlink warning:', e);
+      }
+    }
+
+    const res = await fetch('/api/auth/unlink-google', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${sessionToken}`,
+      },
+    });
+
+    const data = await res.json();
+
+    if (res.ok && data.success && data.user) {
+      return {
+        success: true,
+        user: data.user,
+        message: data.message,
+      };
+    }
+
+    return {
+      success: false,
+      message: data.message || 'Không thể hủy liên kết tài khoản Google.',
+    };
+  } catch (err) {
+    console.error('[GoogleAuth] Lỗi hủy liên kết:', err);
+    return {
+      success: false,
+      message: 'Lỗi mạng khi thực hiện hủy liên kết.',
+    };
   }
 };

@@ -183,6 +183,13 @@ export default function App() {
     }
   };
 
+  // Handle User Profile / Linked Accounts update
+  const handleUserUpdated = useCallback((updatedUser: User) => {
+    setCurrentUser(updatedUser);
+    StorageService.setCurrentUser(updatedUser);
+    refreshAllData();
+  }, [refreshAllData]);
+
   // Handle Logout
   const handleLogout = async () => {
     try {
@@ -285,6 +292,7 @@ export default function App() {
         onLogout={handleLogout}
         onGoHome={() => navigate('/')}
         onOpenMathLab={() => navigate('/math-lab')}
+        onUserUpdated={handleUserUpdated}
       />
     );
   }
@@ -312,6 +320,7 @@ export default function App() {
           onLogout={handleLogout}
           onGoHome={() => navigate('/')}
           isHomePage={false}
+          onUserUpdated={handleUserUpdated}
         />
         <main className="flex-1 p-4 lg:p-6 max-w-7xl mx-auto w-full">
           <div className="mb-4">
@@ -370,6 +379,7 @@ export default function App() {
           onLogout={handleLogout}
           onGoHome={() => navigate('/')}
           isHomePage={false}
+          onUserUpdated={handleUserUpdated}
         />
 
         {/* Main Body with Sidebar */}
@@ -480,6 +490,7 @@ export default function App() {
                   users={users}
                   logs={logs}
                   onRefreshData={refreshAllData}
+                  onUserUpdated={handleUserUpdated}
                 />
               )}
             </div>
@@ -504,6 +515,7 @@ export default function App() {
       exams={exams}
       assignments={assignments}
       submissions={submissions}
+      onUserUpdated={handleUserUpdated}
       onLoginClick={() => navigate('/login')}
       onEnterWorkspace={() => {
         if (currentUser && isStudent(currentUser)) {

@@ -11,9 +11,12 @@ import {
   LayoutDashboard,
   ArrowRight,
   Home,
+  User as UserIcon,
+  Link as LinkIcon,
 } from 'lucide-react';
 import { User, isAdminTeacher, isStudent } from '../types';
 import { getSoundEnabled, setSoundEnabled, playSound } from '../services/sound';
+import { UserProfileModal } from './auth/UserProfileModal';
 
 interface HeaderProps {
   currentUser?: User | null;
@@ -25,6 +28,7 @@ interface HeaderProps {
   onLoginClick?: () => void;
   onEnterWorkspace?: () => void;
   onGoHome?: () => void;
+  onUserUpdated?: (user: User) => void;
   isHomePage?: boolean;
 }
 
@@ -35,11 +39,13 @@ export const Header: React.FC<HeaderProps> = ({
   onLoginClick,
   onEnterWorkspace,
   onGoHome,
+  onUserUpdated,
   isHomePage = false,
 }) => {
   const [soundActive, setSoundActive] = useState<boolean>(getSoundEnabled());
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
 
   const toggleSound = () => {
     const nextState = !soundActive;
@@ -267,6 +273,18 @@ export const Header: React.FC<HeaderProps> = ({
                         </button>
                       )}
 
+                      <button
+                        onClick={() => {
+                          setShowUserDropdown(false);
+                          playSound('click');
+                          setShowProfileModal(true);
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-xs text-indigo-700 hover:bg-indigo-50 rounded-lg transition-colors font-medium cursor-pointer"
+                      >
+                        <LinkIcon className="w-4 h-4 text-indigo-600" />
+                        Hồ sơ & Phương thức đăng nhập
+                      </button>
+
                       {onLogout && (
                         <button
                           onClick={() => {
@@ -288,6 +306,18 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </div>
       </div>
+
+      {/* Modal Hồ sơ cá nhân & Liên kết tài khoản */}
+      {currentUser && (
+        <UserProfileModal
+          currentUser={currentUser}
+          isOpen={showProfileModal}
+          onClose={() => setShowProfileModal(false)}
+          onUserUpdated={(updatedUser) => {
+            onUserUpdated?.(updatedUser);
+          }}
+        />
+      )}
     </header>
   );
 };

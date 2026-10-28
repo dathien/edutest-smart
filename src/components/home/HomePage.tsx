@@ -58,6 +58,7 @@ interface HomePageProps {
   onLogout: () => void;
   onNavigateTab?: (tab: MainTab) => void;
   onOpenMathLab?: () => void;
+  onUserUpdated?: (user: User) => void;
 }
 
 export const HomePage: React.FC<HomePageProps> = ({
@@ -73,6 +74,7 @@ export const HomePage: React.FC<HomePageProps> = ({
   onLogout,
   onNavigateTab,
   onOpenMathLab,
+  onUserUpdated,
 }) => {
   const isUserTeacher = isTeacher(currentUser);
   const isUserStudent = isStudent(currentUser);
@@ -146,6 +148,7 @@ export const HomePage: React.FC<HomePageProps> = ({
         onLoginClick={onLoginClick}
         onEnterWorkspace={onEnterWorkspace}
         onLogout={onLogout}
+        onUserUpdated={onUserUpdated}
       />
 
       {/* Main Operational Dashboard Container */}

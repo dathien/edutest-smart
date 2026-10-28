@@ -32,12 +32,14 @@ import { User, AuditLog, Role } from '../../types';
 import { StorageService } from '../../services/storage';
 import { playSound } from '../../services/sound';
 import { getFirebaseStatus } from '../../services/firebase';
+import { LinkedAccountsCard } from '../auth/LinkedAccountsCard';
 
 interface SettingsViewProps {
   currentUser: User;
   users: User[];
   logs: AuditLog[];
   onRefreshData: () => void;
+  onUserUpdated?: (user: User) => void;
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
@@ -45,6 +47,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   users,
   logs,
   onRefreshData,
+  onUserUpdated,
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'teachers' | 'profile' | 'gas_integration' | 'backup' | 'audit' | 'firebase'>('teachers');
   const [copiedCode, setCopiedCode] = useState(false);
@@ -790,6 +793,18 @@ function readSheetData(sheetName) {
               </button>
             </div>
           </form>
+
+          {/* QUẢN LÝ PHƯƠNG THỨC ĐĂNG NHẬP ĐÃ LIÊN KẾT (GOOGLE SIGN-IN & EMAIL) */}
+          <div className="pt-4 border-t border-slate-200">
+            <LinkedAccountsCard
+              currentUser={currentUser}
+              onUserUpdated={(updatedUser) => {
+                StorageService.setCurrentUser(updatedUser);
+                onUserUpdated?.(updatedUser);
+                onRefreshData();
+              }}
+            />
+          </div>
         </div>
       )}
 
