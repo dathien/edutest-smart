@@ -7,6 +7,7 @@ import {
   linkWithRedirect,
   unlink,
   signOut as fbSignOut,
+  signInWithEmailAndPassword,
   User as FirebaseUser,
   AuthError,
 } from 'firebase/auth';
@@ -143,11 +144,67 @@ export const formatGoogleAuthError = (error: unknown): { code: string; message: 
     };
   }
 
+  if (code === 'auth/invalid-credential' || code === 'auth/wrong-password') {
+    return {
+      code,
+      message: 'Mật khẩu hoặc thông tin đăng nhập không chính xác.',
+      recommendation: 'Vui lòng kiểm tra lại mật khẩu hoặc sử dụng chức năng quên mật khẩu.',
+    };
+  }
+
+  if (code === 'auth/user-not-found') {
+    return {
+      code,
+      message: 'Không tìm thấy tài khoản Firebase với email này.',
+      recommendation: 'Vui lòng kiểm tra lại địa chỉ email hoặc đăng ký tài khoản mới.',
+    };
+  }
+
+  if (code === 'auth/invalid-email') {
+    return {
+      code,
+      message: 'Địa chỉ email không đúng định dạng.',
+      recommendation: 'Vui lòng nhập đúng định dạng email (ví dụ: user@example.com).',
+    };
+  }
+
+  if (code === 'auth/user-disabled') {
+    return {
+      code,
+      message: 'Tài khoản Firebase này đã bị vô hiệu hóa.',
+      recommendation: 'Vui lòng liên hệ quản trị viên để được hỗ trợ.',
+    };
+  }
+
+  if (code === 'auth/too-many-requests') {
+    return {
+      code,
+      message: 'Quá nhiều lần thử đăng nhập không thành công. Firebase đã tạm thời khóa quyền truy cập.',
+      recommendation: 'Vui lòng chờ ít phút trước khi thử lại hoặc đặt lại mật khẩu.',
+    };
+  }
+
   return {
     code: code || 'auth/unknown',
-    message: rawMsg || 'Xảy ra lỗi trong quá trình xác thực với Google.',
+    message: rawMsg || 'Xảy ra lỗi trong quá trình xác thực với hệ thống.',
     recommendation: 'Vui lòng thử lại hoặc đăng nhập bằng tài khoản/mật khẩu được cấp.',
   };
+};
+
+/**
+ * Đăng nhập bằng Email và Mật khẩu qua Firebase Authentication
+ */
+export const signInWithFirebaseEmailPassword = async (email: string, pass: string): Promise<FirebaseUser> => {
+  const auth = getFirebaseAuth();
+  if (!auth) {
+    const status = getFirebaseStatus();
+    throw new Error(
+      `Firebase Authentication chưa sẵn sàng (Thiếu biến môi trường: ${status.missingKeys.join(', ')}). Vui lòng kiểm tra cấu hình.`
+    );
+  }
+
+  const credential = await signInWithEmailAndPassword(auth, email.trim(), pass);
+  return credential.user;
 };
 
 /**

@@ -33,22 +33,27 @@ export interface FirebaseConnectionStatus {
 
 // 6 biến cấu hình Firebase tiêu chuẩn đọc từ biến môi trường Vite (tiền tố VITE_)
 const rawApiKey = (import.meta.env.VITE_FIREBASE_API_KEY || '').trim();
-const rawAuthDomain = (import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'edutest-smart.firebaseapp.com').trim();
-const rawProjectId = (import.meta.env.VITE_FIREBASE_PROJECT_ID || 'edutest-smart').trim();
-const rawStorageBucket = (import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'edutest-smart.appspot.com').trim();
+const rawAuthDomain = (import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || '').trim();
+const rawProjectId = (import.meta.env.VITE_FIREBASE_PROJECT_ID || '').trim();
+const rawStorageBucket = (import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || '').trim();
 const rawMessagingSenderId = (import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '').trim();
 const rawAppId = (import.meta.env.VITE_FIREBASE_APP_ID || '').trim();
 
+// Tên miền và storage bucket chuẩn với fallback an toàn dựa trên Project ID
+const effectiveProjectId = rawProjectId || 'edutest-smart';
+const effectiveAuthDomain = rawAuthDomain || `${effectiveProjectId}.firebaseapp.com`;
+const effectiveStorageBucket = rawStorageBucket || `${effectiveProjectId}.firebasestorage.app`;
+
 export const firebaseConfig: EduTestFirebaseConfig = {
   apiKey: rawApiKey,
-  authDomain: rawAuthDomain,
-  projectId: rawProjectId,
-  storageBucket: rawStorageBucket,
+  authDomain: effectiveAuthDomain,
+  projectId: effectiveProjectId,
+  storageBucket: effectiveStorageBucket,
   messagingSenderId: rawMessagingSenderId,
   appId: rawAppId,
 };
 
-// Theo dõi 6 biến cấu hình chính thức (không yêu cầu VITE_FIREBASE_MEASUREMENT_ID)
+// Theo dõi 6 biến cấu hình chính thức từ import.meta.env
 const missingConfigKeys: string[] = [];
 const providedConfigKeys: string[] = [];
 
@@ -76,12 +81,13 @@ let firebaseAuthInstance: Auth | null = null;
 let firebaseFirestoreInstance: Firestore | null = null;
 let initializationError: string | null = null;
 
-// Khởi tạo an toàn: Chỉ khởi tạo khi có đủ apiKey, appId và projectId
-const isConfigSufficient = !!(rawApiKey && rawAppId && rawProjectId);
+// Khởi tạo an toàn: Chỉ khởi tạo khi có đủ apiKey, appId và projectId hợp lệ
+const isConfigSufficient = !!(rawApiKey && rawAppId && effectiveProjectId);
 
 if (isConfigSufficient) {
   try {
-    if (getApps().length === 0) {
+    const apps = getApps();
+    if (apps.length === 0) {
       firebaseAppInstance = initializeApp(firebaseConfig);
     } else {
       firebaseAppInstance = getApp();
@@ -117,8 +123,8 @@ export const getFirebaseStatus = (): FirebaseConnectionStatus => {
   return {
     isConfigured: isConfigSufficient && !initializationError,
     isInitialized: !!firebaseAppInstance,
-    projectId: rawProjectId,
-    authDomain: rawAuthDomain,
+    projectId: effectiveProjectId,
+    authDomain: effectiveAuthDomain,
     databaseId: '(default)',
     plan: 'Spark (Miễn phí)',
     services: ['Firebase Authentication', 'Cloud Firestore (default)'],

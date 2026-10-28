@@ -32,6 +32,7 @@ import {
   loginExistingGoogleUser,
   formatGoogleAuthError,
   isFirebaseAuthReady,
+  signInWithFirebaseEmailPassword,
   GoogleRegistrationPayload,
 } from '../../services/googleAuth';
 import { getFirebaseStatus } from '../../services/firebase';
@@ -266,10 +267,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onBackToHo
     }
   };
 
-  // Đăng nhập truyền thống bằng Mật khẩu / Email hệ thống
+  // Đăng nhập kết hợp: Hỗ trợ đồng thời tài khoản hệ thống & Firebase Authentication Email/Mật khẩu
   const handleSystemLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!username.trim() || !password.trim()) {
+    const cleanUser = username.trim();
+    const cleanPass = password;
+
+    if (!cleanUser || !cleanPass) {
       setErrorMessage('Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu.');
       playSound('wrong');
       return;
@@ -278,11 +282,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onBackToHo
     setLoading(true);
     setErrorMessage(null);
 
+    // 1. Thử xác thực với máy chủ backend (các tài khoản giáo viên/học sinh trong hệ thống)
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: username.trim(), password }),
+        body: JSON.stringify({ username: cleanUser, password: cleanPass }),
       });
 
       const data = await response.json();
@@ -294,12 +299,49 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onBackToHo
           localStorage.setItem('edutest_token', data.token);
         }
         onLoginSuccess(data.user, data.token || '');
-      } else {
-        playSound('wrong');
-        setErrorMessage(data.message || 'Tên đăng nhập hoặc mật khẩu không chính xác.');
+        return;
       }
+
+      // 2. Nếu đăng nhập hệ thống không khớp VÀ người dùng nhập địa chỉ Email VÀ Firebase Auth sẵn sàng:
+      // Thử xác thực trực tiếp qua Firebase Authentication Email/Password
+      if (cleanUser.includes('@') && isFirebaseAuthReady()) {
+        try {
+          const fbUser = await signInWithFirebaseEmailPassword(cleanUser, cleanPass);
+          if (fbUser) {
+            await processAuthenticatedGoogleUser(fbUser);
+            return;
+          }
+        } catch (fbErr: unknown) {
+          console.warn('[Firebase Auth Email/Password]:', fbErr);
+          const parsed = formatGoogleAuthError(fbErr);
+          playSound('wrong');
+          setErrorMessage(parsed.message || data.message || 'Email hoặc mật khẩu không chính xác.');
+          return;
+        }
+      }
+
+      // 3. Nếu không phải email Firebase hoặc Firebase không khả dụng: báo lỗi từ API
+      playSound('wrong');
+      setErrorMessage(data.message || 'Tên đăng nhập hoặc mật khẩu không chính xác.');
     } catch (err) {
       console.error('API login error:', err);
+
+      // Thử Firebase Auth trực tiếp nếu máy chủ tạm thời không phản hồi
+      if (cleanUser.includes('@') && isFirebaseAuthReady()) {
+        try {
+          const fbUser = await signInWithFirebaseEmailPassword(cleanUser, cleanPass);
+          if (fbUser) {
+            await processAuthenticatedGoogleUser(fbUser);
+            return;
+          }
+        } catch (fbErr: unknown) {
+          const parsed = formatGoogleAuthError(fbErr);
+          playSound('wrong');
+          setErrorMessage(parsed.message);
+          return;
+        }
+      }
+
       playSound('wrong');
       setErrorMessage('Không thể kết nối đến máy chủ xác thực. Vui lòng kiểm tra lại mạng hoặc thử lại.');
     } finally {
